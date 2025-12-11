@@ -49,24 +49,16 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ userType, onLoginSuccess, onLog
         if (isSignUp) {
             finalUserType = userType;
         } else {
-            // This is a sign-in flow. The role MUST exist in the database for non-candidate users.
+            // This is a sign-in flow. Always trust the role from the database if it exists.
             if (userRoleFromMetadata) {
-                if (userRoleFromMetadata !== userType && userType !== UserType.CANDIDATE) {
-                    throw new Error(`You are trying to log in as a ${userType.toLowerCase()}, but your account is a ${userRoleFromMetadata.toLowerCase()}.`);
-                }
                 finalUserType = userRoleFromMetadata;
             } else {
-                // If the user is trying to log in as a candidate and has no role, we can default them.
-                if (userType === UserType.CANDIDATE) {
-                    finalUserType = UserType.CANDIDATE;
-                    // Attempt to update the user's role for future logins.
-                    supabase.auth.updateUser({ data: { role: UserType.CANDIDATE } })
-                        .catch(err => console.error("Async user role update failed:", err));
-                } else {
-                    // For any other privileged login (Partner, Supervisor, etc.), a role must be defined.
-                    // We cannot trust the button they clicked to assign a role.
-                    throw new Error('User role not defined. Please contact an administrator.');
-                }
+                // If no role is in metadata, default to CANDIDATE.
+                // This handles users created before roles or directly in Supabase.
+                finalUserType = UserType.CANDIDATE;
+                // Attempt to update the user's role for future logins.
+                supabase.auth.updateUser({ data: { role: UserType.CANDIDATE } })
+                    .catch(err => console.error("Async user role update failed:", err));
             }
         }
         

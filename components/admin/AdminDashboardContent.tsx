@@ -2425,8 +2425,7 @@ const AddNewVendorForm: React.FC<{ onClose: () => void; onAddVendor: (data: any)
     );
 };
 
-const VendorDirectoryView: React.FC = () => {
-  const [vendors, setVendors] = useState<any[]>([]);
+const VendorDirectoryView: React.FC<{ vendors: any[], setVendors: React.Dispatch<React.SetStateAction<any[]>> }> = ({ vendors, setVendors }) => {
   const [isAddingVendor, setIsAddingVendor] = useState(false);
 
   const handleAddVendor = (vendorData: any) => {
@@ -2441,6 +2440,12 @@ const VendorDirectoryView: React.FC = () => {
     setIsAddingVendor(false);
     alert('Vendor added successfully!');
   };
+  
+  const handleDeleteVendor = (vendorId: string) => {
+    if (window.confirm("Are you sure you want to delete this vendor?")) {
+        setVendors(prev => prev.filter(v => v.id !== vendorId));
+    }
+  }
 
   if (isAddingVendor) {
     return (
@@ -2536,7 +2541,7 @@ const VendorDirectoryView: React.FC = () => {
 
                 <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-4 text-sm font-semibold">
                     <button onClick={() => alert(`Editing vendor ${vendor.name}`)} className="text-blue-600 hover:text-blue-800 transition-colors">Edit</button>
-                    <button onClick={() => alert(`Deleting vendor ${vendor.name}`)} className="text-red-600 hover:text-red-800 transition-colors">Delete</button>
+                    <button onClick={() => handleDeleteVendor(vendor.id)} className="text-red-600 hover:text-red-800 transition-colors">Delete</button>
                 </div>
               </div>
             ))}
@@ -3540,7 +3545,14 @@ const SettingsView: React.FC<{
   onAddJob: (job: Omit<Job, 'id' | 'postedDate' | 'adminId'>) => void;
   onDeleteJob: (id: string) => void;
   onAddTeamMemberClick: () => void;
-}> = ({ userType, branding, onUpdateBranding, onLogoUpload, currentUser, jobs, onAddJob, onDeleteJob, onAddTeamMemberClick }) => {
+  // Props for lifted state
+  jobRoles: string[];
+  setJobRoles: React.Dispatch<React.SetStateAction<string[]>>;
+  locations: string[];
+  setLocations: React.Dispatch<React.SetStateAction<string[]>>;
+  stores: { id: string, name: string, location: string }[];
+  setStores: React.Dispatch<React.SetStateAction<{ id: string, name: string, location: string }[]>>;
+}> = ({ userType, branding, onUpdateBranding, onLogoUpload, currentUser, jobs, onAddJob, onDeleteJob, onAddTeamMemberClick, jobRoles, setJobRoles, locations, setLocations, stores, setStores }) => {
     type SettingsTab = 'team' | 'permissions' | 'role' | 'panel' | 'account' | 'branding';
     const [activeTab, setActiveTab] = useState<SettingsTab>('team');
 
@@ -3553,11 +3565,6 @@ const SettingsView: React.FC<{
         'Demo Requests': { HR: false, TeamLead: false, TeamMember: false, Partner: false },
         'Revenue': { HR: false, TeamLead: false, TeamMember: false, Partner: false },
     });
-
-    // State for PanelConfigurationView
-    const [jobRoles, setJobRoles] = useState<string[]>([]);
-    const [locations, setLocations] = useState<string[]>([]);
-    const [stores, setStores] = useState<{ id: string, name: string, location: string }[]>([]);
 
     // State for MyProfileView
     const [profile, setProfile] = useState({
@@ -3832,6 +3839,28 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
 }) => {
   const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
 
+  // Lifted state for settings panels
+  const [jobRoles, setJobRoles] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('rkm_panel_job_roles') || '[]'); } catch { return []; }
+  });
+  const [locations, setLocations] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('rkm_panel_locations') || '[]'); } catch { return []; }
+  });
+  const [stores, setStores] = useState<{ id: string, name: string, location: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('rkm_panel_stores') || '[]'); } catch { return []; }
+  });
+   const [vendors, setVendors] = useState<any[]>(() => {
+    try {
+        const saved = localStorage.getItem('rkm_vendors');
+        return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => { localStorage.setItem('rkm_panel_job_roles', JSON.stringify(jobRoles)); }, [jobRoles]);
+  useEffect(() => { localStorage.setItem('rkm_panel_locations', JSON.stringify(locations)); }, [locations]);
+  useEffect(() => { localStorage.setItem('rkm_panel_stores', JSON.stringify(stores)); }, [stores]);
+  useEffect(() => { localStorage.setItem('rkm_vendors', JSON.stringify(vendors)); }, [vendors]);
+
   // Filter teamPerformance for TeamLead view
   const isTeamLead = userType === UserType.TEAMLEAD;
   const teamLeadTeamMembers = ['John Doe', 'Jane Smith']; // Mock data
@@ -3908,7 +3937,7 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
                  <h3 className="text-xl font-semibold text-gray-800">Team Performance</h3>
               </div>
               <TeamPerformanceTable data={filteredTeamPerformance} />
-              <AddTeamMemberModal isOpen={isAddTeamMemberModalOpen} onClose={() => setIsAddTeamMemberModalOpen(false)} onSave={(data) => console.log(data)} />
+              <AddTeamMemberModal isOpen={isAddTeamMemberModalOpen} onClose={() => setIsAddTeamMemberModalOpen(false)} onSave={(data) => console.log(data)} availableLocations={locations} availableVendors={vendors.map(v => v.name)} />
             </div>
           </div>
         );
@@ -3931,7 +3960,7 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
       case AdminMenuItem.ManageJobBoard:
         return <JobBoardView jobs={jobs} onAddJob={onAddJob} onDeleteJob={onDeleteJob} />;
       case AdminMenuItem.VendorDirectory:
-        return <VendorDirectoryView />;
+        return <VendorDirectoryView vendors={vendors} setVendors={setVendors} />;
       case AdminMenuItem.DemoRequests:
         return <DemoRequestsView />;
       case AdminMenuItem.Revenue:
@@ -3949,8 +3978,17 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
                     onAddJob={onAddJob}
                     onDeleteJob={onDeleteJob}
                     onAddTeamMemberClick={() => setIsAddTeamMemberModalOpen(true)}
+                    jobRoles={jobRoles} setJobRoles={setJobRoles}
+                    locations={locations} setLocations={setLocations}
+                    stores={stores} setStores={setStores}
                 />
-                <AddTeamMemberModal isOpen={isAddTeamMemberModalOpen} onClose={() => setIsAddTeamMemberModalOpen(false)} onSave={(data) => { console.log(data); alert('Team member added!'); }} />
+                <AddTeamMemberModal 
+                    isOpen={isAddTeamMemberModalOpen} 
+                    onClose={() => setIsAddTeamMemberModalOpen(false)} 
+                    onSave={(data) => { console.log(data); alert('Team member added!'); }} 
+                    availableLocations={locations}
+                    availableVendors={vendors.map(v => v.name)}
+                />
             </>
         );
 

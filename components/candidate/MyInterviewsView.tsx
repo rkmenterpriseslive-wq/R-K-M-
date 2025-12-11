@@ -61,7 +61,7 @@ const MyInterviewsView: React.FC = () => {
                                 <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 <div>
                                     {/* FIX: The `day` option for `toLocaleDateString` does not accept 'long'.
-                                    Replaced with `weekday: 'long'` to show the day of the week and added `day: 'numeric'` to show the date. */}
+                                    Replaced with `day: 'numeric'` to show the date correctly. */}
                                     <p className="font-semibold">{new Date(interview.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</p>
                                     <p className="text-gray-500">{interview.time}</p>
                                 </div>

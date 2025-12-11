@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useCallback, useEffect } from 'react';
 import Header from './components/Header';
 import LoginPanel from './components/LoginPanel';
@@ -31,36 +33,77 @@ const initialStats: DashboardStats = {
   team: []
 };
 
+const BRANDING_STORAGE_KEY = 'rkm_branding_config';
+const LOGO_STORAGE_KEY = 'rkm_portal_logo';
+// FIX: The original base64 string was corrupted and causing a syntax error, leading to incorrect type inference.
+// It has been replaced with a valid 1x1 transparent PNG.
+const defaultLogo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+const defaultBranding: BrandingConfig = {
+  portalName: 'R.K.M ENTERPRISE',
+  hireTalent: {
+      title: 'Hire Top Talent',
+      description: 'Post your job openings and find the perfect candidates for your business.',
+      link: 'https://example.com/hire',
+      backgroundImage: null,
+  },
+  becomePartner: {
+      title: 'Become a Partner',
+      description: 'Expand your business by collaborating with us and accessing our network.',
+      link: 'https://example.com/register',
+      backgroundImage: null,
+  }
+};
+
 const App: React.FC = () => {
   const [currentUserType, setCurrentUserType] = useState<UserType>(UserType.NONE);
   const [currentAppUser, setCurrentAppUser] = useState<AppUser | null>(null);
   const [showLoginPanelForType, setShowLoginPanelForType] = useState<UserType>(UserType.NONE);
   const [showRequestDemoModal, setShowRequestDemoModal] = useState(false);
-  const [showApplyJobModal, setShowApplyJobModal] = useState(false); // State for the apply modal
-  const [selectedJobForApply, setSelectedJobForApply] = useState<Job | null>(null); // State for the selected job
+  const [showApplyJobModal, setShowApplyJobModal] = useState(false);
+  const [selectedJobForApply, setSelectedJobForApply] = useState<Job | null>(null);
   const [isRegisteringAdmin, setIsRegisteringAdmin] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [logoSrc, setLogoSrc] = useState<string | null>(null);
   const [activeAdminMenuItem, setActiveAdminMenuItem] = useState<AdminMenuItem>(AdminMenuItem.Dashboard);
   const [activeCandidateMenuItem, setActiveCandidateMenuItem] = useState<CandidateMenuItem>(CandidateMenuItem.ApplyJobs);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>(initialStats);
   
-  // Default Branding Config
-  const [branding, setBranding] = useState<BrandingConfig>({
-    portalName: 'R.K.M ENTERPRISE',
-    hireTalent: {
-        title: 'Hire Top Talent',
-        description: 'Post your job openings and find the perfect candidates for your business.',
-        link: 'https://example.com/hire',
-        backgroundImage: null,
-    },
-    becomePartner: {
-        title: 'Become a Partner',
-        description: 'Expand your business by collaborating with us and accessing our network.',
-        link: 'https://example.com/register',
-        backgroundImage: null,
+  const [branding, setBranding] = useState<BrandingConfig>(() => {
+    try {
+        const savedBranding = localStorage.getItem(BRANDING_STORAGE_KEY);
+        return savedBranding ? JSON.parse(savedBranding) : defaultBranding;
+    } catch (error) {
+        console.error("Could not parse branding from localStorage", error);
+        return defaultBranding;
     }
   });
+
+  const [logoSrc, setLogoSrc] = useState<string | null>(() => {
+    try {
+        return localStorage.getItem(LOGO_STORAGE_KEY) || defaultLogo;
+    } catch (error) {
+        console.error("Could not read logo from localStorage", error);
+        return defaultLogo;
+    }
+  });
+
+  const handleUpdateBranding = (newBranding: BrandingConfig) => {
+    try {
+        localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(newBranding));
+    } catch (error) {
+        console.error("Could not save branding to localStorage", error);
+    }
+    setBranding(newBranding);
+  };
+
+  const handleLogoUpload = (newLogo: string) => {
+      try {
+          localStorage.setItem(LOGO_STORAGE_KEY, newLogo);
+      } catch (error) {
+          console.error("Could not save logo to localStorage", error);
+      }
+      setLogoSrc(newLogo);
+  };
 
   const fetchJobsData = useCallback(async () => {
     try { setJobs(await getJobs()); } catch (error) { console.error("Failed to fetch jobs:", error); }
@@ -84,7 +127,6 @@ const App: React.FC = () => {
 
   const handleUserSession = (user: any) => {
     const email = user.email;
-    // Removed hardcoded roleMap. Role should be managed in Supabase user_metadata.
     const type = (user.user_metadata?.role as UserType) || UserType.CANDIDATE;
     
     setCurrentAppUser({ uid: user.id, email: email || '', userType: type });
@@ -123,7 +165,6 @@ const App: React.FC = () => {
     } catch (error) { 
       console.error("Error signing out:", error); 
     } finally {
-      // Explicitly reset state to ensure UI updates immediately
       setCurrentAppUser(null);
       setCurrentUserType(UserType.NONE);
       setActiveAdminMenuItem(AdminMenuItem.Dashboard);
@@ -183,14 +224,14 @@ const App: React.FC = () => {
         {currentUserType !== UserType.NONE ? (
           <Dashboard
             userType={currentUserType} jobs={jobs} onAddJob={handleAddJob} onDeleteJob={handleDeleteJob}
-            currentLogoSrc={logoSrc} onLogoUpload={setLogoSrc}
+            currentLogoSrc={logoSrc} onLogoUpload={handleLogoUpload}
             pipelineStats={dashboardStats.pipeline} vendorStats={dashboardStats.vendor} complaintStats={dashboardStats.complaint}
             partnerRequirementStats={dashboardStats.partnerRequirement}
             candidatesByProcess={dashboardStats.process} candidatesByRole={dashboardStats.role} teamPerformance={dashboardStats.team}
             activeAdminMenuItem={activeAdminMenuItem} onAdminMenuItemClick={handleAdminMenuItemClick}
             activeCandidateMenuItem={activeCandidateMenuItem} onCandidateMenuItemClick={handleCandidateMenuItemClick}
             onLogout={handleLogout}
-            branding={branding} onUpdateBranding={setBranding}
+            branding={branding} onUpdateBranding={handleUpdateBranding}
             currentUser={currentAppUser}
             onApplyNow={handleApplyNow}
           />

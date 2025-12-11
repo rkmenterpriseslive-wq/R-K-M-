@@ -7,9 +7,12 @@ interface AddTeamMemberModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (memberData: any) => void;
+    // Fix: Add missing props to the interface to allow them to be passed from the parent component.
+    availableLocations: string[];
+    availableVendors: string[];
 }
 
-const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose, onSave }) => {
+const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose, onSave, availableLocations, availableVendors }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -82,18 +85,15 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
                      <div>
                         <label htmlFor="workingLocations" className="block text-sm font-medium text-gray-700 mb-1">Working Locations</label>
                         <select id="workingLocations" name="workingLocations" multiple value={formData.workingLocations} onChange={handleMultiSelectChange} className={`${selectStyles} h-24`}>
-                            <option>Delhi</option>
-                            <option>Noida</option>
-                            <option>Gurgaon</option>
-                            <option>Mumbai</option>
+                            {/* Fix: Dynamically render options from props instead of hardcoding them. */}
+                            {availableLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                         </select>
                     </div>
                      <div>
                         <label htmlFor="vendors" className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
                         <select id="vendors" name="vendors" multiple value={formData.vendors} onChange={handleMultiSelectChange} className={`${selectStyles} h-24`}>
-                            <option>Vendor A</option>
-                            <option>Vendor B</option>
-                            <option>Direct</option>
+                            {/* Fix: Dynamically render options from props instead of hardcoding them. */}
+                            {availableVendors.map(vendor => <option key={vendor} value={vendor}>{vendor}</option>)}
                         </select>
                     </div>
                 </div>

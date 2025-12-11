@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AdminMenuItem, SidebarProps, UserType } from '../../types';
 
@@ -108,7 +107,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick, userType }) 
           
           <div className="my-2 border-t border-gray-100 mx-4"></div>
           
-          <NavItem label="ADMIN" isHeader />
           <NavItem label={AdminMenuItem.ManageJobBoard} />
           <NavItem label={AdminMenuItem.VendorDirectory} />
           <NavItem label={AdminMenuItem.DemoRequests} />
