@@ -1,0 +1,5 @@
+{
+  "name": "R K M Career",
+  "description": "A web application panel for managing job postings with different user login types (Candidate, Partner, Team, Admin).",
+  "requestFramePermissions": []
+}
