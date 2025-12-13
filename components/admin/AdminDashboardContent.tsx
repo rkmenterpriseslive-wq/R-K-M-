@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   AdminMenuItem,
@@ -14,6 +13,8 @@ import {
   Complaint,
   WarningLetter,
   Ticket,
+  PanelConfig,
+  Store,
 } from '../../types';
 import JobPostingForm from '../JobPostingForm';
 import LogoUploader from '../LogoUploader';
@@ -42,8 +43,65 @@ import StoreEmployeesView from '../supervisor/StoreEmployeesView';
 import HRDashboardView from '../hr/HRDashboardView';
 import { getHRDashboardStats } from '../../utils/hrService';
 import PartnerDashboardView from '../partner/PartnerDashboardView';
+import { getRevenueData, RevenueData, getPanelConfig, updatePanelConfig, createVendor, getVendors } from '../../services/firebaseService';
+import HelpCenterView from '../candidate/HelpCenterView';
 
 declare const html2pdf: any;
+
+// --- SETTINGS TABS TYPE ---
+type SettingsTab = 'Team & Roles' | 'Permissions' | 'Role' | 'Panel Options' | 'My Account' | 'Branding';
+
+
+const TeamWiseTable = () => {
+    const [activeTab, setActiveTab] = useState('Team Wise');
+    const tabs = ['Team Wise', 'Partner Wise', 'Store Wise', 'Role Wise'];
+
+    return (
+        <div className="bg-white rounded-xl shadow-md border border-gray-200">
+            <div className="p-4 border-b">
+                <div className="flex space-x-2">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                                activeTab === tab 
+                                ? 'bg-yellow-400 text-yellow-900' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">{activeTab}</h3>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                {['TEAM', 'LOCATION', 'ROLE', 'STORE', 'BRAND', 'PARTNER', 'TOTAL OPENINGS', 'PENDING', 'APPROVED'].map(header => (
+                                    <th key={header} className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colSpan={9} className="text-center py-10 text-gray-400">
+                                    No data available
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // New HR Summary Card component
 const HRSummaryCard: React.FC<{ onNavigate: (item: AdminMenuItem) => void }> = ({ onNavigate }) => {
@@ -652,8 +710,22 @@ const SelectionDashboardView: React.FC<{ teamData: TeamMemberPerformance[], user
     date: '',
   });
 
-  const allKanbanData: any[] = [];
-  const allSummaryData: any[] = [];
+  const allKanbanData: any[] = [
+    { id: 'C001', name: 'Amit Verma', role: 'Picker', storeName: 'Select Citywalk', phone: '9876543210', recruiter: 'Rahul', status: 'Sourced', date: '2023-10-27' },
+    { id: 'C002', name: 'Priya Sharma', role: 'Sales Executive', storeName: 'GIP Mall', phone: '9876543211', recruiter: 'Sneha', status: 'Interview', date: '2023-10-26' },
+    { id: 'C003', name: 'Rohan Gupta', role: 'Team Leader', storeName: 'DLF Mall', phone: '9876543212', recruiter: 'Rahul', status: 'Selected', date: '2023-10-25' },
+    { id: 'C004', name: 'Anjali Singh', role: 'Packer', storeName: 'Ambience Mall', phone: '9876543213', recruiter: 'Sneha', status: 'On the way', date: '2023-10-27' },
+    { id: 'C005', name: 'Vikram Singh', role: 'Driver', storeName: 'Okhla Warehouse', phone: '9876543214', recruiter: 'Rahul', status: 'Sourced', date: '2023-10-27' },
+    { id: 'C006', name: 'Neha Gupta', role: 'Store Manager', storeName: 'Logix City Center', phone: '9876543215', recruiter: 'Sneha', status: 'Interview', date: '2023-10-24' },
+    { id: 'C007', name: 'Suresh Raina', role: 'Helper', storeName: 'Sector 18 Store', phone: '9876543216', recruiter: 'Amit', status: 'Sourced', date: '2023-10-27' },
+    { id: 'C008', name: 'Kavita Mishra', role: 'Sales Associate', storeName: 'Pacific Mall', phone: '9876543217', recruiter: 'Rahul', status: 'On the way', date: '2023-10-26' },
+  ];
+
+  const allSummaryData: any[] = [
+    { member: 'Rahul', sourced: 15, onWay: 8, interview: 5, selected: 3, total: 31 },
+    { member: 'Sneha', sourced: 12, onWay: 6, interview: 7, selected: 2, total: 27 },
+    { member: 'Amit', sourced: 10, onWay: 4, interview: 2, selected: 1, total: 17 },
+  ];
 
   // Filtering Logic for Team Lead
   const isTeamLead = userType === UserType.TEAMLEAD;
@@ -662,7 +734,7 @@ const SelectionDashboardView: React.FC<{ teamData: TeamMemberPerformance[], user
 
   const initialKanbanData = useMemo(() => isTeamLead
       ? allKanbanData.filter(c => myTeamMembers.includes(c.recruiter))
-      : allKanbanData, [isTeamLead, allKanbanData]);
+      : allKanbanData, [isTeamLead]);
 
   const [candidates, setCandidates] = useState(initialKanbanData);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
@@ -1053,7 +1125,7 @@ const AllCandidatesView: React.FC<{ userType: UserType; jobs: Job[] }> = ({ user
         (filters.appliedDate === '' || c.date === filters.appliedDate) &&
         (filters.quitDate === '' || c.quitDate === filters.quitDate)
     );
-  }, [allCandidates, filters, isTeamLead, myTeamMembers]);
+  }, [allCandidates, filters, isTeamLead]);
 
   const selectClassName = "block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500";
 
@@ -1280,7 +1352,9 @@ const AllCandidatesView: React.FC<{ userType: UserType; jobs: Job[] }> = ({ user
                     defaultValue=""
                     onChange={(e) => {
                         const selectedJobId = e.target.value;
-                        handleConfirmTransfer(transferCandidate.id, selectedJobId);
+                        if (transferCandidate) {
+                            handleConfirmTransfer(transferCandidate.id, selectedJobId);
+                        }
                     }}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 >
@@ -1300,16 +1374,8 @@ const AllCandidatesView: React.FC<{ userType: UserType; jobs: Job[] }> = ({ user
 };
 
 const AttendanceView: React.FC = () => {
-  // ... existing AttendanceView code ...
-  const [selectedMonth, setSelectedMonth] = useState<string>('2023-10');
-  // Commission represents the potential payout for the full month or a fixed commission
-  const [attendanceData, setAttendanceData] = useState([
-    { id: 1, name: 'Amit Kumar', vendor: 'Vendor A', role: 'Picker', totalDays: 31, presentDays: 28, commission: 3000 },
-    { id: 2, name: 'Sneha Gupta', vendor: 'Direct', role: 'Store Manager', totalDays: 31, presentDays: 30, commission: 0 },
-    { id: 3, name: 'Rahul Sharma', vendor: 'Vendor B', role: 'Sales Executive', totalDays: 31, presentDays: 25, commission: 4500 },
-    { id: 4, name: 'Priya Singh', vendor: 'Direct', role: 'Team Leader', totalDays: 31, presentDays: 29, commission: 0 },
-    { id: 5, name: 'Vikram Malhotra', vendor: 'Vendor A', role: 'Delivery', totalDays: 31, presentDays: 20, commission: 3000 },
-  ]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('2025-12');
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
 
   const handlePresentDaysChange = (id: number, val: string) => {
     let days = parseInt(val);
@@ -1350,7 +1416,8 @@ const AttendanceView: React.FC = () => {
             <thead className="bg-gray-50/50">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">CANDIDATE NAME</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">VENDOR / ROLE</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">VENDOR</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">ROLE</th>
                 <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">BASE COMMISSION</th>
                 <th className="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">ATTENDANCE</th>
                 <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">PAYABLE AMOUNT</th>
@@ -1358,53 +1425,59 @@ const AttendanceView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-               {attendanceData.map((item) => {
-                 const payable = calculatePayable(item.commission, item.presentDays, item.totalDays);
-                 return (
-                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-fit mb-1">{item.vendor}</span>
-                            <span className="text-sm text-gray-700">{item.role}</span>
-                        </div>
+               {attendanceData.length > 0 ? (
+                 attendanceData.map((item) => {
+                   const payable = calculatePayable(item.commission, item.presentDays, item.totalDays);
+                   return (
+                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.vendor}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.role}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-600">
+                          {item.commission > 0 ? `₹${item.commission.toLocaleString()}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex justify-center items-center gap-2">
+                               <input 
+                                  type="number" 
+                                  min="0" 
+                                  max="31"
+                                  value={item.presentDays}
+                                  onChange={(e) => handlePresentDaysChange(item.id, e.target.value)}
+                                  className="w-16 px-2 py-1.5 text-center border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                              />
+                              <span className="text-gray-400 text-sm">/ {item.totalDays}</span>
+                          </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <span className={`font-bold ${payable > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                              {payable > 0 ? `₹${payable.toLocaleString()}` : '-'}
+                          </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button onClick={() => alert(`Attendance saved for ${item.name}`)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                              Save
+                          </button>
+                      </td>
+                   </tr>
+                 )})
+               ) : (
+                <tr>
+                    <td colSpan={7} className="px-6 py-24 text-center text-gray-500">
+                      No attendance records found for this month.
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-600">
-                        {item.commission > 0 ? `₹${item.commission.toLocaleString()}` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex justify-center items-center gap-2">
-                             <input 
-                                type="number" 
-                                min="0" 
-                                max="31"
-                                value={item.presentDays}
-                                onChange={(e) => handlePresentDaysChange(item.id, e.target.value)}
-                                className="w-16 px-2 py-1.5 text-center border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-                            />
-                            <span className="text-gray-400 text-sm">/ {item.totalDays}</span>
-                        </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <span className={`font-bold ${payable > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                            {payable > 0 ? `₹${payable.toLocaleString()}` : '-'}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button onClick={() => alert(`Attendance saved for ${item.name}`)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                            Save
-                        </button>
-                    </td>
-                 </tr>
-               )})}
+                </tr>
+               )}
             </tbody>
           </table>
         </div>
-         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">{attendanceData.length}</span> of <span className="font-medium">{attendanceData.length}</span> results
+         {attendanceData.length > 0 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                    Showing <span className="font-medium">1</span> to <span className="font-medium">{attendanceData.length}</span> of <span className="font-medium">{attendanceData.length}</span> results
+                </div>
             </div>
-         </div>
+         )}
       </div>
     </div>
   );
@@ -2199,273 +2272,185 @@ const ReportsView: React.FC<{ userType: UserType, currentUser?: AppUser | null }
   );
 };
 
-const AddNewVendorForm: React.FC<{ onClose: () => void; onAddVendor: (data: any) => void }> = ({ onClose, onAddVendor }) => {
+const AddVendorForm: React.FC<{
+    onSave: (data: any) => void;
+    onClose: () => void;
+    isSubmitting: boolean;
+    initialData: any | null;
+    panelConfig: PanelConfig | null;
+}> = ({ onSave, onClose, isSubmitting, initialData, panelConfig }) => {
     const [formData, setFormData] = useState({
-        name: '',
-        address: '',
+        brandName: '',
+        partnerName: '',
+        fullAddress: '',
         email: '',
         phone: '',
         locations: [] as string[],
         roles: [] as string[],
+        commissionType: 'percentage',
+        commissionValue: '',
         terms: '',
     });
 
-    // State for the new commission structure
-    const [commissionStructureType, setCommissionStructureType] = useState<'slab' | 'attendance' | 'percentage'>('percentage');
-    const [commissionSubType, setCommissionSubType] = useState('One Time Based');
-    const [slabs, setSlabs] = useState([{ id: Date.now(), from: '1', to: '', amount: '' }]);
-    const [attendanceProfiles, setAttendanceProfiles] = useState([{ id: Date.now(), profile: '', attendance: '', amount: '' }]);
-    const [percentageData, setPercentageData] = useState({ percentage: '' });
-
-    const handleSlabChange = (id: number, field: 'from' | 'to' | 'amount', value: string) => {
-        setSlabs(slabs.map(slab => slab.id === id ? { ...slab, [field]: value } : slab));
-    };
-    const handleAddSlab = () => setSlabs([...slabs, { id: Date.now(), from: '', to: '', amount: '' }]);
-    const handleRemoveSlab = (id: number) => setSlabs(slabs.filter(slab => slab.id !== id));
-
-    const handleProfileChange = (id: number, field: 'profile' | 'attendance' | 'amount', value: string) => {
-        setAttendanceProfiles(profiles => profiles.map(p => p.id === id ? { ...p, [field]: value } : p));
-    };
-    const handleAddProfile = () => setAttendanceProfiles([...attendanceProfiles, { id: Date.now(), profile: '', attendance: '', amount: '' }]);
-    const handleRemoveProfile = (id: number) => setAttendanceProfiles(profiles => profiles.filter(p => p.id !== id));
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                brandName: initialData.brandName || '',
+                partnerName: initialData.partnerName || '',
+                fullAddress: initialData.fullAddress || '',
+                email: initialData.email || '',
+                phone: initialData.phone || '',
+                locations: initialData.locations || [],
+                roles: initialData.roles || [],
+                commissionType: initialData.commissionType || 'percentage',
+                commissionValue: initialData.commissionValue || '',
+                terms: initialData.terms || '',
+            });
+        }
+    }, [initialData]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
-        if (type === 'select-multiple') {
-            const options = (e.target as HTMLSelectElement).options;
-            const selectedValues: string[] = [];
-            for (let i = 0; i < options.length; i++) {
-                if (options[i].selected) {
-                    selectedValues.push(options[i].value);
-                }
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleMultiSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, options } = e.target;
+        const value: string[] = [];
+        for (let i = 0, l = options.length; i < l; i++) {
+            if (options[i].selected) {
+                value.push(options[i].value);
             }
-            setFormData(prev => ({ ...prev, [name]: selectedValues }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
         }
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const commissionData = {
-            structureType: commissionStructureType,
-            subType: commissionSubType,
-            slabs: commissionStructureType === 'slab' ? slabs.filter(s => s.to && s.amount) : [],
-            attendanceProfiles: commissionStructureType === 'attendance' ? attendanceProfiles.filter(p => p.profile && p.attendance && p.amount) : [],
-            percentageData: commissionStructureType === 'percentage' ? percentageData : null,
-        };
-        onAddVendor({ ...formData, commission: commissionData });
+        onSave(formData);
     };
 
-    const baseInputStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm";
+    const selectStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white";
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-                id="vendorName"
-                name="name"
-                label="Vendor Name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="e.g., Blinkit"
-                wrapperClassName="mb-0"
-                required
-            />
-            <Input
-                id="fullAddress"
-                name="address"
-                label="Full Address"
-                value={formData.address}
-                onChange={handleChange}
-                placeholder="Enter full address"
-                wrapperClassName="mb-0"
-                required
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                    id="emailAddress"
-                    name="email"
-                    label="Email Address"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="contact@vendor.com"
-                    wrapperClassName="mb-0"
-                    required
-                />
-                <Input
-                    id="phoneNumber"
-                    name="phone"
-                    label="Phone Number"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+91 98765 43210"
-                    wrapperClassName="mb-0"
-                    required
-                />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <Input id="brandName" name="brandName" label="Brand Name" placeholder="e.g., Blinkit" value={formData.brandName} onChange={handleChange} required wrapperClassName="mb-0"/>
+                <Input id="partnerName" name="partnerName" label="Partner Name" placeholder="e.g., John Doe" value={formData.partnerName} onChange={handleChange} required wrapperClassName="mb-0"/>
+                <div className="md:col-span-2">
+                    <Input id="fullAddress" name="fullAddress" label="Full Address" placeholder="Enter full address" value={formData.fullAddress} onChange={handleChange} required wrapperClassName="mb-0"/>
+                </div>
+                <Input id="email" name="email" label="Email Address" type="email" placeholder="contact@vendor.com" value={formData.email} onChange={handleChange} disabled={!!initialData} required wrapperClassName="mb-0"/>
+                <Input id="phone" name="phone" label="Phone Number" type="tel" placeholder="+91 98765 43210" value={formData.phone} onChange={handleChange} required wrapperClassName="mb-0"/>
+
                 <div>
                     <label htmlFor="locations" className="block text-sm font-medium text-gray-700 mb-1">Operational Locations</label>
-                    <select multiple size={4} id="locations" name="locations" value={formData.locations} onChange={handleChange} className={baseInputStyles}>
-                        <option>Delhi</option>
-                        <option>Mumbai</option>
-                        <option>Bangalore</option>
-                        <option>Noida</option>
-                        <option>Gurgaon</option>
+                    <select id="locations" name="locations" multiple value={formData.locations} onChange={handleMultiSelectChange} className={`${selectStyles} h-28`}>
+                        {(panelConfig?.locations || []).map(loc => <option key={loc} value={loc}>{loc}</option>)}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd on Mac) to select multiple.</p>
                 </div>
-                 <div>
+                <div>
                     <label htmlFor="roles" className="block text-sm font-medium text-gray-700 mb-1">Job Roles</label>
-                    <select multiple size={4} id="roles" name="roles" value={formData.roles} onChange={handleChange} className={baseInputStyles}>
-                        <option>Picker</option>
-                        <option>Packer</option>
-                        <option>Delivery Associate</option>
-                        <option>Sales Executive</option>
-                        <option>Team Leader</option>
+                    <select id="roles" name="roles" multiple value={formData.roles} onChange={handleMultiSelectChange} className={`${selectStyles} h-28`}>
+                        {(panelConfig?.jobRoles || []).map(role => <option key={role} value={role}>{role}</option>)}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd on Mac) to select multiple.</p>
                 </div>
-            </div>
-
-            <fieldset className="border border-gray-300 rounded-lg p-4 space-y-4">
-                <legend className="text-sm font-medium text-gray-700 px-2">Commission Structure</legend>
                 
-                <div className="flex items-center gap-6">
-                    <span className="text-sm font-medium text-gray-700">Structure Type</span>
-                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="structureType" value="percentage" checked={commissionStructureType === 'percentage'} onChange={() => setCommissionStructureType('percentage')} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" />
-                        <span className="text-sm">Percentage Based</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="structureType" value="slab" checked={commissionStructureType === 'slab'} onChange={() => setCommissionStructureType('slab')} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" />
-                        <span className="text-sm">Slab Based</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="structureType" value="attendance" checked={commissionStructureType === 'attendance'} onChange={() => setCommissionStructureType('attendance')} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" />
-                        <span className="text-sm">Attendance Based</span>
-                    </label>
+                <div className="md:col-span-2">
+                    <fieldset className="border rounded-md p-4">
+                        <legend className="text-sm font-medium text-gray-700 px-1">Commission Structure</legend>
+                        <div className="space-y-3">
+                            <div className="flex items-center space-x-6">
+                                <label className="text-sm font-medium text-gray-700">Structure Type</label>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="commissionType" value="percentage" checked={formData.commissionType === 'percentage'} onChange={handleChange} className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"/> Percentage Based</label>
+                                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="commissionType" value="slab" checked={formData.commissionType === 'slab'} onChange={handleChange} className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"/> Slab Based</label>
+                                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="commissionType" value="attendance" checked={formData.commissionType === 'attendance'} onChange={handleChange} className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"/> Attendance Based</label>
+                                </div>
+                            </div>
+                            {formData.commissionType === 'percentage' && (
+                                <Input id="commissionValue" name="commissionValue" label="Percentage (%)" type="number" placeholder="e.g., 10" value={formData.commissionValue} onChange={handleChange} wrapperClassName="mb-0"/>
+                            )}
+                        </div>
+                    </fieldset>
                 </div>
 
-                {commissionStructureType === 'percentage' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                        <Input
-                            id="percentage"
-                            label="Percentage (%)"
-                            type="number"
-                            placeholder="e.g., 10"
-                            value={percentageData.percentage}
-                            onChange={(e) => setPercentageData({ percentage: e.target.value })}
-                            wrapperClassName="mb-0"
-                        />
-                    </div>
-                )}
-                
-                {commissionStructureType === 'slab' && (
-                    <div className="space-y-3">
-                        {slabs.map((slab, index) => (
-                            <div key={slab.id} className="flex items-center gap-2">
-                                <select value={commissionSubType} onChange={(e) => setCommissionSubType(e.target.value)} className={`${baseInputStyles} w-1/4`}>
-                                    <option>One Time Based</option>
-                                    <option>Monthly</option>
-                                </select>
-                                <input type="number" placeholder="1" value={slab.from} onChange={(e) => handleSlabChange(slab.id, 'from', e.target.value)} className={`${baseInputStyles} w-1/6`} />
-                                <input type="number" placeholder="To" value={slab.to} onChange={(e) => handleSlabChange(slab.id, 'to', e.target.value)} className={`${baseInputStyles} w-1/6`} />
-                                <input type="number" placeholder="Amount (₹)" value={slab.amount} onChange={(e) => handleSlabChange(slab.id, 'amount', e.target.value)} className={`${baseInputStyles} flex-1`} />
-                                <button type="button" onClick={() => handleRemoveSlab(slab.id)} className="text-red-500 hover:text-red-700 p-2">
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                            </div>
-                        ))}
-                        <button type="button" onClick={handleAddSlab} className="text-sm font-semibold text-blue-600 hover:text-blue-800">+ Add Slab</button>
-                    </div>
-                )}
-                
-                {commissionStructureType === 'attendance' && (
-                    <div className="space-y-3">
-                         {attendanceProfiles.map((profile) => (
-                            <div key={profile.id} className="flex items-center gap-2">
-                                <select value={commissionSubType} onChange={(e) => setCommissionSubType(e.target.value)} className={`${baseInputStyles} w-1/4`}>
-                                    <option>One Time Based</option>
-                                    <option>Monthly</option>
-                                </select>
-                                <input type="text" placeholder="Profile/Role" value={profile.profile} onChange={(e) => handleProfileChange(profile.id, 'profile', e.target.value)} className={`${baseInputStyles} w-1/3`} />
-                                <input type="number" placeholder="Attendance (e.g. 1)" value={profile.attendance} onChange={(e) => handleProfileChange(profile.id, 'attendance', e.target.value)} className={`${baseInputStyles} w-1/4`} />
-                                <input type="number" placeholder="Amount (₹)" value={profile.amount} onChange={(e) => handleProfileChange(profile.id, 'amount', e.target.value)} className={`${baseInputStyles} flex-1`} />
-                                <button type="button" onClick={() => handleRemoveProfile(profile.id)} className="text-red-500 hover:text-red-700 p-2">
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                            </div>
-                        ))}
-                        <button type="button" onClick={handleAddProfile} className="text-sm font-semibold text-blue-600 hover:text-blue-800">+ Add Profile</button>
-                    </div>
-                )}
-            </fieldset>
-
-             <div>
-                <label htmlFor="terms" className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
-                <textarea
-                    id="terms"
-                    name="terms"
-                    rows={4}
-                    value={formData.terms}
-                    onChange={handleChange}
-                    placeholder="Enter any terms and conditions for this vendor..."
-                    className={baseInputStyles}
-                />
+                <div className="md:col-span-2">
+                    <label htmlFor="terms" className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+                    <textarea id="terms" name="terms" rows={3} value={formData.terms} onChange={handleChange} className={selectStyles} placeholder="Enter any terms and conditions for this vendor..."></textarea>
+                </div>
             </div>
-            
-            <div className="flex justify-end gap-4 pt-4">
+            <div className="flex justify-end gap-3 pt-6 border-t mt-6">
                 <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button type="submit" variant="primary">Add Vendor</Button>
+                <Button type="submit" variant="primary" loading={isSubmitting}>{initialData ? 'Update Vendor' : 'Add Vendor'}</Button>
             </div>
         </form>
     );
 };
 
-const VendorDirectoryView: React.FC<{ vendors: any[], setVendors: React.Dispatch<React.SetStateAction<any[]>> }> = ({ vendors, setVendors }) => {
-  const [isAddingVendor, setIsAddingVendor] = useState(false);
+const VendorDirectoryView: React.FC<{
+    vendors: any[];
+    setVendors: React.Dispatch<React.SetStateAction<any[]>>;
+    isLoading: boolean;
+    panelConfig: PanelConfig | null;
+}> = ({ vendors, setVendors, isLoading, panelConfig }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<any | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const handleOpenModal = (vendor: any | null) => {
+    setEditingVendor(vendor);
+    setIsModalOpen(true);
+  };
+  
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingVendor(null);
+  };
 
-  const handleAddVendor = (vendorData: any) => {
-    const newVendor = {
-        id: new Date().toISOString(),
-        ...vendorData,
-        // Mock data for display
-        subTitle: 'Delivery & Logistics Partner',
-        domain: `${vendorData.name.toLowerCase().replace(/\s+/g, '')}.com`,
-    };
-    setVendors(prev => [newVendor, ...prev]);
-    setIsAddingVendor(false);
-    alert('Vendor added successfully!');
+  const handleSaveVendor = async (vendorData: any) => {
+    setIsSubmitting(true);
+    try {
+      if (editingVendor) { // Update
+        // await updateVendor(editingVendor.id, vendorData);
+        // setVendors(prev => prev.map(v => v.id === editingVendor.id ? { ...v, ...vendorData } : v));
+        alert('Vendor update functionality is not yet implemented.');
+      } else { // Create
+        const newVendor = await createVendor(vendorData);
+        const finalNewVendor = {
+            ...newVendor,
+            domain: `${newVendor.brandName.toLowerCase().replace(/\s+/g, '')}.com`
+        };
+        setVendors(prev => [finalNewVendor, ...prev]);
+        alert('Vendor added successfully!');
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error(error);
+      alert(`Failed to save vendor: ${error instanceof Error ? error.message : 'An unknown error occurred.'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleDeleteVendor = (vendorId: string) => {
-    if (window.confirm("Are you sure you want to delete this vendor?")) {
+    if (window.confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) {
+        // TODO: Add Firebase deletion logic here
         setVendors(prev => prev.filter(v => v.id !== vendorId));
     }
-  }
+  };
 
-  if (isAddingVendor) {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-gray-800">Add New Vendor</h2>
-        <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
-            <AddNewVendorForm 
-                onClose={() => setIsAddingVendor(false)} 
-                onAddVendor={handleAddVendor} 
-            />
-        </div>
-      </div>
-    );
+  if (isLoading) {
+    return <div className="text-center p-12">Loading vendors...</div>
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h2 className="text-3xl font-bold text-gray-800">Vendor Directory</h2>
-        <button onClick={() => setIsAddingVendor(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+        <button onClick={() => handleOpenModal(null)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110 2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
@@ -2492,18 +2477,21 @@ const VendorDirectoryView: React.FC<{ vendors: any[], setVendors: React.Dispatch
                      <div className="w-12 h-12 shrink-0 rounded-lg bg-white border border-gray-100 flex items-center justify-center p-1 shadow-sm">
                         <img 
                             src={`https://logo.clearbit.com/${vendor.domain}`} 
-                            alt={vendor.name} 
+                            alt={vendor.brandName} 
                             className="w-full h-full object-contain"
                             onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement?.classList.add('bg-gray-100');
-                                e.currentTarget.parentElement!.innerHTML = `<span class="text-sm font-bold text-gray-500">${vendor.name.substring(0, 2).toUpperCase()}</span>`;
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                const parent = (e.currentTarget as HTMLImageElement).parentElement;
+                                if (parent) {
+                                  parent.classList.add('bg-gray-100');
+                                  parent.innerHTML = `<span class="text-sm font-bold text-gray-500">${vendor.brandName.substring(0, 2).toUpperCase()}</span>`;
+                                }
                             }}
                         />
                      </div>
                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 leading-tight">{vendor.name}</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">{vendor.subTitle}</p>
+                        <h3 className="text-lg font-bold text-gray-900 leading-tight">{vendor.brandName}</h3>
+                        {vendor.partnerName && <p className="text-sm text-gray-600">{vendor.partnerName}</p>}
                      </div>
                   </div>
 
@@ -2518,34 +2506,33 @@ const VendorDirectoryView: React.FC<{ vendors: any[], setVendors: React.Dispatch
                      </div>
                      <div className="flex items-start gap-3 text-sm text-gray-600">
                         <svg className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        <span className="leading-snug"><span className="font-medium text-gray-500">Locations:</span> {Array.isArray(vendor.locations) ? vendor.locations.join(', ') : vendor.locations}</span>
+                        <span className="leading-snug"><span className="font-medium text-gray-500">Locations:</span> {Array.isArray(vendor.locations) ? vendor.locations.join(', ') : ''}</span>
                      </div>
                      <div className="flex items-start gap-3 text-sm text-gray-600">
                         <svg className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.55 23.55 0 0112 15c-3.791 0-7.141-.676-9-1.745M19 19v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1m14-10a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V9a2 2 0 012-2h2zM9 9a2 2 0 012 2v2a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2h2z" /></svg>
-                        <span className="leading-snug"><span className="font-medium text-gray-500">Roles:</span> {Array.isArray(vendor.roles) ? vendor.roles.join(', ') : vendor.roles}</span>
-                     </div>
-                     <div className="flex items-start gap-3 text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span className="leading-snug">
-                            <span className="font-medium text-gray-500">Commission:</span> 
-                            {vendor.commission ? 
-                                (vendor.commission.structureType === 'slab' ? 'Slab Based' : 
-                                vendor.commission.structureType === 'attendance' ? 'Attendance Based' :
-                                vendor.commission.structureType === 'percentage' ? 'Percentage Based' :
-                                'Not Set') 
-                                : 'Not Set'}
-                        </span>
+                        <span className="leading-snug"><span className="font-medium text-gray-500">Roles:</span> {Array.isArray(vendor.roles) ? vendor.roles.join(', ') : ''}</span>
                      </div>
                   </div>
                 </div>
-
                 <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-4 text-sm font-semibold">
-                    <button onClick={() => alert(`Editing vendor ${vendor.name}`)} className="text-blue-600 hover:text-blue-800 transition-colors">Edit</button>
+                    <button onClick={() => handleOpenModal(vendor)} className="text-blue-600 hover:text-blue-800 transition-colors">Edit</button>
                     <button onClick={() => handleDeleteVendor(vendor.id)} className="text-red-600 hover:text-red-800 transition-colors">Delete</button>
                 </div>
               </div>
             ))}
           </div>
+      )}
+      
+      {isModalOpen && (
+        <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingVendor ? 'Edit Vendor' : 'Add New Vendor'} maxWidth="max-w-4xl">
+            <AddVendorForm 
+                onSave={handleSaveVendor}
+                onClose={handleCloseModal}
+                isSubmitting={isSubmitting}
+                initialData={editingVendor}
+                panelConfig={panelConfig}
+            />
+        </Modal>
       )}
     </div>
   );
@@ -2565,21 +2552,53 @@ const Placeholder: React.FC<{ title: string }> = ({ title }) => (
   </div>
 );
 
-const JobBoardView: React.FC<{ jobs: Job[]; onAddJob: (job: any) => void; onDeleteJob: (id: string) => void }> = ({ jobs, onAddJob, onDeleteJob }) => {
-  const [isPostingJob, setIsPostingJob] = useState(false);
+const JobBoardView: React.FC<{ 
+    jobs: Job[]; 
+    onAddJob: (job: any) => void;
+    onUpdateJob: (job: Job) => void;
+    onDeleteJob: (id: string) => void;
+    vendors: any[];
+    panelConfig: PanelConfig | null;
+}> = ({ jobs, onAddJob, onUpdateJob, onDeleteJob, vendors, panelConfig }) => {
+  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
 
-  const handleJobAdded = (job: Omit<Job, 'id' | 'postedDate' | 'adminId'>) => {
-    onAddJob(job);
-    setIsPostingJob(false);
+  const handleAddNewClick = () => {
+    setEditingJob(null);
+    setIsFormVisible(true);
   };
 
-  if (isPostingJob) {
+  const handleEditClick = (job: Job) => {
+    setEditingJob(job);
+    setIsFormVisible(true);
+  };
+
+  const handleFormClose = () => {
+    setIsFormVisible(false);
+    setEditingJob(null);
+  };
+
+  const handleJobSave = (job: Omit<Job, 'id' | 'postedDate' | 'adminId'>) => {
+    onAddJob(job);
+    handleFormClose();
+  };
+  
+  const handleJobUpdate = (job: Job) => {
+    onUpdateJob(job);
+    handleFormClose();
+  };
+
+  if (isFormVisible) {
     return (
       <div className="space-y-6 animate-fade-in">
         <JobPostingForm 
-            onAddJob={handleJobAdded}
+            onAddJob={handleJobSave}
+            onUpdateJob={handleJobUpdate}
+            initialData={editingJob}
             isModalMode={false}
-            onClose={() => setIsPostingJob(false)}
+            onClose={handleFormClose}
+            vendors={vendors}
+            panelConfig={panelConfig}
         />
       </div>
     );
@@ -2589,24 +2608,21 @@ const JobBoardView: React.FC<{ jobs: Job[]; onAddJob: (job: any) => void; onDele
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
-           <h2 className="text-3xl font-bold text-gray-800">Manage Job Board</h2>
-           <p className="text-gray-600 mt-1">Create and manage job listings.</p>
+           <h2 className="text-3xl font-bold text-gray-800">Job Board</h2>
         </div>
         <button 
-            onClick={() => setIsPostingJob(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+            onClick={handleAddNewClick}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm"
         >
-           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110 2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Post New Job
+            + Post New Job
         </button>
       </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-         <h3 className="text-xl font-bold text-gray-800 mb-4">Active Job Postings</h3>
-         <JobList jobs={jobs} currentUserType={UserType.ADMIN} onDeleteJob={onDeleteJob} />
-      </div>
+      <JobList 
+        jobs={jobs} 
+        currentUserType={UserType.ADMIN} 
+        onDeleteJob={onDeleteJob}
+        onEditJob={handleEditClick}
+      />
     </div>
   );
 };
@@ -2655,6 +2671,42 @@ const DemoRequestsView: React.FC = () => {
 };
 const RevenueView: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    setSelectedMonth(`${year}-${month}`);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedMonth) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      setRevenueData(null);
+      try {
+        const data = await getRevenueData(selectedMonth);
+        setRevenueData(data);
+      } catch (err) {
+        setError('Failed to fetch revenue data. Please try again.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedMonth]);
+
+  const netProfit = revenueData ? revenueData.totalRevenue - revenueData.totalCost : 0;
+  const profitMargin = revenueData && revenueData.totalRevenue > 0 ? (netProfit / revenueData.totalRevenue) * 100 : 0;
+  const formatCurrency = (amount: number) => `₹ ${amount.toLocaleString('en-IN')}`;
+
 
   return (
     <div className="space-y-8">
@@ -2677,19 +2729,19 @@ const RevenueView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
            <p className="text-sm font-medium text-gray-500 mb-2">Total Revenue</p>
-           <p className="text-3xl font-bold text-green-600">₹ 0</p>
+           <p className="text-3xl font-bold text-green-600">{formatCurrency(revenueData?.totalRevenue ?? 0)}</p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
            <p className="text-sm font-medium text-gray-500 mb-2">Total Operational Cost</p>
-           <p className="text-3xl font-bold text-red-600">₹ 0</p>
+           <p className="text-3xl font-bold text-red-600">{formatCurrency(revenueData?.totalCost ?? 0)}</p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
            <p className="text-sm font-medium text-gray-500 mb-2">Net Profit</p>
-           <p className="text-3xl font-bold text-blue-600">₹ 0</p>
+           <p className="text-3xl font-bold text-blue-600">{formatCurrency(netProfit)}</p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
            <p className="text-sm font-medium text-gray-500 mb-2">Profit Margin</p>
-           <p className="text-3xl font-bold text-purple-600">0%</p>
+           <p className="text-3xl font-bold text-purple-600">{profitMargin.toFixed(1)}%</p>
         </div>
       </div>
 
@@ -2709,11 +2761,26 @@ const RevenueView: React.FC = () => {
                   </tr>
                </thead>
                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                     <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                        Loading data...
-                     </td>
-                  </tr>
+                    {loading ? (
+                        <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Loading data...</td></tr>
+                    ) : error ? (
+                        <tr><td colSpan={5} className="px-6 py-8 text-center text-red-500">{error}</td></tr>
+                    ) : !revenueData || revenueData.teamProfitability.length === 0 ? (
+                        <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No data available for {selectedMonth}.</td></tr>
+                    ) : (
+                        revenueData.teamProfitability.map(item => {
+                            const net = item.revenue - item.cost;
+                            return (
+                                <tr key={item.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 font-medium text-gray-900">{item.member}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-600">{item.role}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-green-600">{formatCurrency(item.revenue)}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-red-600">{formatCurrency(item.cost)}</td>
+                                    <td className={`px-6 py-4 text-right text-sm font-bold ${net > 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatCurrency(net)}</td>
+                                </tr>
+                            );
+                        })
+                    )}
                </tbody>
             </table>
          </div>
@@ -2735,11 +2802,26 @@ const RevenueView: React.FC = () => {
                   </tr>
                </thead>
                <tbody className="bg-white divide-y divide-gray-200">
-                   <tr>
-                     <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                        Loading data...
-                     </td>
-                  </tr>
+                   {loading ? (
+                        <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Loading data...</td></tr>
+                   ) : error ? (
+                        <tr><td colSpan={5} className="px-6 py-8 text-center text-red-500">{error}</td></tr>
+                   ) : !revenueData || revenueData.clientProfitability.length === 0 ? (
+                        <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No data available for {selectedMonth}.</td></tr>
+                   ) : (
+                        revenueData.clientProfitability.map(item => {
+                            const profit = item.revenueIn - item.costOut;
+                            return (
+                                <tr key={item.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-600">{item.type}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-green-600">{formatCurrency(item.revenueIn)}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-red-600">{formatCurrency(item.costOut)}</td>
+                                    <td className={`px-6 py-4 text-right text-sm font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatCurrency(profit)}</td>
+                                </tr>
+                            );
+                        })
+                   )}
                </tbody>
             </table>
          </div>
@@ -2779,8 +2861,7 @@ const MyProfileView: React.FC<{ user?: AppUser | null, profile: any, setProfile:
     };
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <h2 className="text-3xl font-bold text-gray-800">My Account</h2>
+        <div className="animate-fade-in">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-3">
                     {/* Left Panel: Profile Card */}
@@ -2876,7 +2957,6 @@ const MyProfileView: React.FC<{ user?: AppUser | null, profile: any, setProfile:
         </div>
     );
 };
-
 
 const RoleSettingsView: React.FC = () => {
   const [roles, setRoles] = useState<{ id: string; name: string; panel: string; }[]>([]);
@@ -3068,7 +3148,7 @@ const ManagementCard: React.FC<{
                         <div key={item} className="flex justify-between items-center bg-gray-50 p-2 rounded-md text-sm group">
                             <span className="text-gray-800 truncate pr-2">{item}</span>
                             <button onClick={() => onDeleteItem(item)} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                         </div>
                     ))
@@ -3081,27 +3161,25 @@ const ManagementCard: React.FC<{
 };
 
 const PanelConfigurationView: React.FC<{
-    jobRoles: string[];
-    setJobRoles: React.Dispatch<React.SetStateAction<string[]>>;
-    locations: string[];
-    setLocations: React.Dispatch<React.SetStateAction<string[]>>;
-    stores: { id: string, name: string, location: string }[];
-    setStores: React.Dispatch<React.SetStateAction<{ id: string, name: string, location: string }[]>>;
-}> = ({ jobRoles, setJobRoles, locations, setLocations, stores, setStores }) => {
+    config: PanelConfig;
+    onConfigChange: (newConfig: PanelConfig) => void;
+}> = ({ config, onConfigChange }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalConfig, setModalConfig] = useState<{ title: string; onSave: (value1: string, value2?: string) => void; type?: 'store' | 'generic' } | null>(null);
     const [newItemValue, setNewItemValue] = useState('');
     const [newStoreLocation, setNewStoreLocation] = useState('');
 
     useEffect(() => {
+        const locations = config.locations || [];
         if (locations.length > 0) {
             setNewStoreLocation(locations[0]);
         }
-    }, [locations]);
+    }, [config.locations]);
 
     const handleOpenModal = (title: string, onSave: (value1: string, value2?: string) => void, type: 'store' | 'generic' = 'generic') => {
       setModalConfig({ title, onSave, type });
       setNewItemValue('');
+      const locations = config.locations || [];
       if (type === 'store' && locations.length > 0) {
           setNewStoreLocation(locations[0]);
       }
@@ -3124,34 +3202,35 @@ const PanelConfigurationView: React.FC<{
         }
     };
   
-    const handleAddItem = (setter: React.Dispatch<React.SetStateAction<string[]>>) => (value: string) => {
-        setter(prev => [...prev, value]);
+    const handleAddItem = (key: 'jobRoles' | 'locations') => (value: string) => {
+        onConfigChange({ ...config, [key]: [...(config[key] || []), value] });
     };
     
-    const handleDeleteItem = (setter: React.Dispatch<React.SetStateAction<string[]>>) => (value: string) => {
+    const handleDeleteItem = (key: 'jobRoles' | 'locations') => (value: string) => {
         if (window.confirm(`Are you sure you want to delete "${value}"?`)) {
-            setter(prev => prev.filter(item => item !== value));
+            onConfigChange({ ...config, [key]: (config[key] || []).filter(item => item !== value) });
         }
     };
 
     const handleAddStore = (name: string, location?: string) => {
         if (!location) return;
-        setStores(prev => [...prev, { id: Date.now().toString(), name, location }]);
+        const newStore: Store = { id: Date.now().toString(), name, location };
+        onConfigChange({ ...config, stores: [...(config.stores || []), newStore] });
     };
 
     const handleDeleteStore = (itemString: string) => {
         if (window.confirm(`Are you sure you want to delete "${itemString}"?`)) {
-            const storeToDelete = stores.find(s => `${s.name} (${s.location})` === itemString);
+            const storeToDelete = (config.stores || []).find(s => `${s.name} (${s.location})` === itemString);
             if (storeToDelete) {
-                setStores(prev => prev.filter(s => s.id !== storeToDelete.id));
+                onConfigChange({ ...config, stores: (config.stores || []).filter(s => s.id !== storeToDelete.id) });
             }
         }
     };
+    
+    const locations = config.locations || [];
 
     return (
       <div className="space-y-8 animate-fade-in">
-        <h3 className="text-xl font-bold text-gray-900">Panel Configuration</h3>
-        
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-6">
           <ToggleSwitch 
             label="Email Notifications" 
@@ -3168,19 +3247,19 @@ const PanelConfigurationView: React.FC<{
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ManagementCard 
                 title="Job Roles" 
-                items={jobRoles} 
-                onAddItem={() => handleOpenModal('Add New Job Role', handleAddItem(setJobRoles))}
-                onDeleteItem={handleDeleteItem(setJobRoles)}
+                items={config.jobRoles || []} 
+                onAddItem={() => handleOpenModal('Add New Job Role', handleAddItem('jobRoles'))}
+                onDeleteItem={handleDeleteItem('jobRoles')}
             />
             <ManagementCard 
                 title="Locations" 
                 items={locations} 
-                onAddItem={() => handleOpenModal('Add New Location', handleAddItem(setLocations))}
-                onDeleteItem={handleDeleteItem(setLocations)}
+                onAddItem={() => handleOpenModal('Add New Location', handleAddItem('locations'))}
+                onDeleteItem={handleDeleteItem('locations')}
             />
             <ManagementCard 
                 title="Store Names" 
-                items={stores.map(s => `${s.name} (${s.location})`)} 
+                items={(config.stores || []).map(s => `${s.name} (${s.location})`)} 
                 onAddItem={() => handleOpenModal('Add New Store Name', handleAddStore, 'store')}
                 onDeleteItem={handleDeleteStore}
             />
@@ -3315,98 +3394,94 @@ const PortalBrandingView: React.FC<{
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-md border border-gray-200">
-      <h2 className="text-2xl font-bold text-gray-900 mb-8">Portal Branding</h2>
-      
-      <div className="space-y-10">
-        <section>
-          <h3 className="text-lg font-semibold text-gray-800 pb-3 border-b border-gray-200 mb-6">Portal Logo & Name</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <FileInput label="Portal Logo" onFileSelect={setNewLogoBase64} />
-            <Input
-              id="portalName"
-              label="Portal Name"
-              type="text"
-              placeholder="e.g., R.K.M ENTERPRISE"
-              value={branding.portalName}
-              onChange={(e) => onBrandingChange({...branding, portalName: e.target.value})}
-              wrapperClassName="w-full"
-            />
-          </div>
-        </section>
+    <div className="space-y-10">
+      <section>
+        <h3 className="text-lg font-semibold text-gray-800 pb-3 border-b border-gray-200 mb-6">Portal Logo & Name</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <FileInput label="Portal Logo" onFileSelect={setNewLogoBase64} />
+          <Input
+            id="portalName"
+            label="Portal Name"
+            type="text"
+            placeholder="e.g., R.K.M ENTERPRISE"
+            value={branding.portalName}
+            onChange={(e) => onBrandingChange({...branding, portalName: e.target.value})}
+            wrapperClassName="w-full"
+          />
+        </div>
+      </section>
 
-        <section>
-          <h3 className="text-lg font-semibold text-gray-800 pb-3 border-b border-gray-200 mb-6">Hire Top Talent Banner</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <Input
-                id="hireTitle"
-                label="Title"
-                type="text"
-                placeholder="e.g., Hire Top Talent"
-                value={branding.hireTalent.title}
-                onChange={(e) => handleInputChange('hireTalent', 'title', e.target.value)}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Input
-                id="hireDescription"
-                label="Description"
-                type="text"
-                placeholder="e.g., Post your job openings..."
-                value={branding.hireTalent.description}
-                onChange={(e) => handleInputChange('hireTalent', 'description', e.target.value)}
-              />
-            </div>
-            <FileInput label="Background Image" onFileSelect={setNewHireBgBase64} />
+      <section>
+        <h3 className="text-lg font-semibold text-gray-800 pb-3 border-b border-gray-200 mb-6">Hire Top Talent Banner</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
             <Input
-              id="hireLink"
-              label="Page Link"
+              id="hireTitle"
+              label="Title"
               type="text"
-              placeholder="https://example.com/hire"
-              value={branding.hireTalent.link}
-              onChange={(e) => handleInputChange('hireTalent', 'link', e.target.value)}
-              wrapperClassName="w-full"
+              placeholder="e.g., Hire Top Talent"
+              value={branding.hireTalent.title}
+              onChange={(e) => handleInputChange('hireTalent', 'title', e.target.value)}
             />
           </div>
-        </section>
+          <div className="md:col-span-2">
+            <Input
+              id="hireDescription"
+              label="Description"
+              type="text"
+              placeholder="e.g., Post your job openings..."
+              value={branding.hireTalent.description}
+              onChange={(e) => handleInputChange('hireTalent', 'description', e.target.value)}
+            />
+          </div>
+          <FileInput label="Background Image" onFileSelect={setNewHireBgBase64} />
+          <Input
+            id="hireLink"
+            label="Page Link"
+            type="text"
+            placeholder="https://example.com/hire"
+            value={branding.hireTalent.link}
+            onChange={(e) => handleInputChange('hireTalent', 'link', e.target.value)}
+            wrapperClassName="w-full"
+          />
+        </div>
+      </section>
 
-        <section>
-          <h3 className="text-lg font-semibold text-gray-800 pb-3 border-b border-gray-200 mb-6">Become a Partner Banner</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <Input
-                id="partnerTitle"
-                label="Title"
-                type="text"
-                placeholder="e.g., Become a Partner"
-                value={branding.becomePartner.title}
-                onChange={(e) => handleInputChange('becomePartner', 'title', e.target.value)}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Input
-                id="partnerDescription"
-                label="Description"
-                type="text"
-                placeholder="e.g., Expand your business by collaborating..."
-                value={branding.becomePartner.description}
-                onChange={(e) => handleInputChange('becomePartner', 'description', e.target.value)}
-              />
-            </div>
-             <FileInput label="Background Image" onFileSelect={setNewRegisterBgBase64} />
-             <Input
-              id="registerLink"
-              label="Page Link"
+      <section>
+        <h3 className="text-lg font-semibold text-gray-800 pb-3 border-b border-gray-200 mb-6">Become a Partner Banner</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <Input
+              id="partnerTitle"
+              label="Title"
               type="text"
-              placeholder="https://example.com/register"
-              value={branding.becomePartner.link}
-              onChange={(e) => handleInputChange('becomePartner', 'link', e.target.value)}
-              wrapperClassName="w-full"
+              placeholder="e.g., Become a Partner"
+              value={branding.becomePartner.title}
+              onChange={(e) => handleInputChange('becomePartner', 'title', e.target.value)}
             />
           </div>
-        </section>
-      </div>
+          <div className="md:col-span-2">
+            <Input
+              id="partnerDescription"
+              label="Description"
+              type="text"
+              placeholder="e.g., Expand your business by collaborating with us..."
+              value={branding.becomePartner.description}
+              onChange={(e) => handleInputChange('becomePartner', 'description', e.target.value)}
+            />
+          </div>
+           <FileInput label="Background Image" onFileSelect={setNewRegisterBgBase64} />
+           <Input
+            id="registerLink"
+            label="Page Link"
+            type="text"
+            placeholder="https://example.com/register"
+            value={branding.becomePartner.link}
+            onChange={(e) => handleInputChange('becomePartner', 'link', e.target.value)}
+            wrapperClassName="w-full"
+          />
+        </div>
+      </section>
 
       <div className="mt-12 flex justify-end">
         <Button onClick={handleSave} variant="primary" className="bg-indigo-600 hover:bg-indigo-700">
@@ -3445,7 +3520,7 @@ const PermissionsView: React.FC<{
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-md border border-gray-200">
+    <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Page Access Permissions</h2>
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -3466,8 +3541,8 @@ const PermissionsView: React.FC<{
                                     <input
                                         type="checkbox"
                                         className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                        checked={permissions[page as Page][role as Role]}
-                                        onChange={() => handlePermissionChange(page as Page, role as Role)}
+                                        checked={permissions[page][role]}
+                                        onChange={() => handlePermissionChange(page, role)}
                                     />
                                 </td>
                             ))}
@@ -3476,57 +3551,76 @@ const PermissionsView: React.FC<{
                 </tbody>
             </table>
         </div>
-        <div className="mt-8 flex justify-end">
+        <div className="mt-6 flex justify-end">
             <Button variant="primary" onClick={() => alert('Permissions saved!')}>Save Permissions</Button>
         </div>
     </div>
   );
 };
 
-const TeamAndRolesView: React.FC<{ onAddMemberClick: () => void }> = ({ onAddMemberClick }) => {
-    const mockTeamMembers: { id: number; name: string; role: string; post: string; manager: string; salary: string; }[] = [];
+interface TeamMember {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    designation: string;
+    manager: string;
+    salary: number;
+}
+const TeamRolesView: React.FC<{
+    onAddTeamMember: () => void;
+}> = ({ onAddTeamMember }) => {
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
+        // Mock data to show table functionality
+        { id: 'tm1', name: 'Rahul Sharma', email: 'rahul@example.com', role: 'TeamLead', designation: 'Senior Recruiter', manager: 'Admin', salary: 75000 },
+        { id: 'tm2', name: 'Sneha Gupta', email: 'sneha@example.com', role: 'TeamMember', designation: 'Recruiter', manager: 'Rahul Sharma', salary: 45000 },
+    ]);
+
+    const handleDelete = (id: string) => {
+        if(window.confirm("Are you sure you want to delete this team member?")) {
+            setTeamMembers(prev => prev.filter(m => m.id !== id));
+        }
+    };
 
     return (
-        <div>
-            <div className="flex justify-between items-center border-b border-gray-200 pb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Manage Team & Roles</h2>
-                <Button onClick={onAddMemberClick} variant="primary" className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 11a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1v-1z" />
-                    </svg>
-                    Add Team Member
-                </Button>
-            </div>
-             <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="animate-fade-in">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-gray-900">Manage Team & Roles</h3>
+                    <Button variant="primary" onClick={onAddTeamMember} className="bg-indigo-600 hover:bg-indigo-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110 2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+                        Add Team Member
+                    </Button>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                {['NAME', 'ROLE', 'POST', 'MANAGER', 'SALARY', 'ACTIONS'].map(h => (
-                                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-                                ))}
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manager</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {mockTeamMembers.length > 0 ? mockTeamMembers.map(member => (
+                            {teamMembers.map(member => (
                                 <tr key={member.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{member.name}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                                        <div className="text-sm text-gray-500">{member.email}</div>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.role}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.post}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.designation}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.manager}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{member.salary}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{member.salary.toLocaleString()}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
                                         <button className="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                        <button className="text-red-600 hover:text-red-900">Delete</button>
+                                        <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-900">Delete</button>
                                     </td>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                                        No team members added yet.
-                                    </td>
-                                </tr>
-                            )}
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -3536,287 +3630,84 @@ const TeamAndRolesView: React.FC<{ onAddMemberClick: () => void }> = ({ onAddMem
 };
 
 const SettingsView: React.FC<{
-  userType: UserType;
-  branding: BrandingConfig;
-  onUpdateBranding: (b: BrandingConfig) => void;
-  onLogoUpload: (base64: string) => void;
-  currentUser?: AppUser | null;
-  jobs: Job[];
-  onAddJob: (job: Omit<Job, 'id' | 'postedDate' | 'adminId'>) => void;
-  onDeleteJob: (id: string) => void;
-  onAddTeamMemberClick: () => void;
-  // Props for lifted state
-  jobRoles: string[];
-  setJobRoles: React.Dispatch<React.SetStateAction<string[]>>;
-  locations: string[];
-  setLocations: React.Dispatch<React.SetStateAction<string[]>>;
-  stores: { id: string, name: string, location: string }[];
-  setStores: React.Dispatch<React.SetStateAction<{ id: string, name: string, location: string }[]>>;
-}> = ({ userType, branding, onUpdateBranding, onLogoUpload, currentUser, jobs, onAddJob, onDeleteJob, onAddTeamMemberClick, jobRoles, setJobRoles, locations, setLocations, stores, setStores }) => {
-    type SettingsTab = 'team' | 'permissions' | 'role' | 'panel' | 'account' | 'branding';
-    const [activeTab, setActiveTab] = useState<SettingsTab>('team');
-
-    // State for PermissionsView
-    type Role = 'HR' | 'TeamLead' | 'TeamMember' | 'Partner';
-    type Page = 'Manage Job Board' | 'Vendor Directory' | 'Demo Requests' | 'Revenue';
-    const [permissions, setPermissions] = useState<Record<Page, Record<Role, boolean>>>({
-        'Manage Job Board': { HR: true, TeamLead: false, TeamMember: false, Partner: false },
-        'Vendor Directory': { HR: true, TeamLead: true, TeamMember: false, Partner: true },
-        'Demo Requests': { HR: false, TeamLead: false, TeamMember: false, Partner: false },
-        'Revenue': { HR: false, TeamLead: false, TeamMember: false, Partner: false },
-    });
-
-    // State for MyProfileView
-    const [profile, setProfile] = useState({
-        fullName: 'Admin User',
-        email: currentUser?.email || '',
-        phone: '+1 234 567 890',
-        address: '',
-        currentRole: '',
-        company: '',
-        totalExperience: '',
-        skills: '',
-        highestQualification: '',
-        university: '',
-        graduationYear: '',
-    });
+    branding: BrandingConfig,
+    onUpdateBranding: (b: BrandingConfig) => void,
+    onLogoUpload: (logo: string) => void,
+    currentUser?: AppUser | null,
+    panelConfig: PanelConfig | null,
+    onUpdatePanelConfig: (config: PanelConfig) => void,
+    userProfile: any,
+    setUserProfile: (p: any) => void,
+    onAddTeamMember: () => void;
+}> = ({ branding, onUpdateBranding, onLogoUpload, currentUser, panelConfig, onUpdatePanelConfig, userProfile, setUserProfile, onAddTeamMember }) => {
+    const [activeTab, setActiveTab] = useState<SettingsTab>('Team & Roles');
+    
+    const [tempBranding, setTempBranding] = useState(branding);
     useEffect(() => {
-        setProfile(p => ({ ...p, email: currentUser?.email || '' }));
-    }, [currentUser]);
-
-    // State for PortalBrandingView
-    const [localBranding, setLocalBranding] = useState(branding);
-    useEffect(() => {
-        setLocalBranding(branding);
+        setTempBranding(branding);
     }, [branding]);
 
-    const handleBrandingSave = (brandingToSave: BrandingConfig, newLogo?: string) => {
-        onUpdateBranding(brandingToSave);
+    const handleBrandingSave = (updatedBranding: BrandingConfig, newLogo?: string) => {
+        onUpdateBranding(updatedBranding);
         if (newLogo) {
             onLogoUpload(newLogo);
         }
-        alert('Branding saved successfully!');
+        alert('Branding settings saved successfully!');
     };
 
-    const tabs: { id: SettingsTab; label: string }[] = [
-        { id: 'team', label: 'Team & Roles' },
-        { id: 'permissions', label: 'Permissions' },
-        { id: 'role', label: 'Role' },
-        { id: 'panel', label: 'Panel Options' },
-        { id: 'account', label: 'My Account' },
-        { id: 'branding', label: 'Branding' },
-    ];
-    
-    const renderContent = () => {
-        switch (activeTab) {
-            case 'team': return <TeamAndRolesView onAddMemberClick={onAddTeamMemberClick} />;
-            case 'permissions': return <PermissionsView permissions={permissions} setPermissions={setPermissions} />;
-            case 'role': return <RoleSettingsView />;
-            case 'panel': return <PanelConfigurationView jobRoles={jobRoles} setJobRoles={setJobRoles} locations={locations} setLocations={setLocations} stores={stores} setStores={setStores} />;
-            case 'account': return <MyProfileView user={currentUser} profile={profile} setProfile={setProfile} />;
-            case 'branding': return <PortalBrandingView branding={localBranding} onBrandingChange={setLocalBranding} onSave={handleBrandingSave} />;
-            default: return null;
-        }
+    const handlePanelConfigSave = (newConfig: PanelConfig) => {
+        onUpdatePanelConfig(newConfig);
     };
+
+    const [permissions, setPermissions] = useState<Record<Page, Record<Role, boolean>>>(() => {
+        const initial: Record<Page, Record<Role, boolean>> = {
+            'Manage Job Board': { HR: true, TeamLead: true, TeamMember: false, Partner: false },
+            'Vendor Directory': { HR: true, TeamLead: false, TeamMember: false, Partner: false },
+            'Demo Requests': { HR: true, TeamLead: true, TeamMember: false, Partner: false },
+            'Revenue': { HR: true, TeamLead: false, TeamMember: false, Partner: false },
+        };
+        return initial;
+    });
+
+    const tabs: SettingsTab[] = ['Team & Roles', 'Permissions', 'Role', 'Panel Options', 'My Account', 'Branding'];
 
     return (
         <div className="space-y-6">
-            <h1 className="text-4xl font-bold text-slate-800">Settings</h1>
+            <h2 className="text-3xl font-bold text-gray-800">Settings</h2>
+
             <div className="border-b border-gray-200">
-                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
                     {tabs.map(tab => (
-                         <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm focus:outline-none ${
-                                activeTab === tab.id
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                activeTab === tab
                                 ? 'border-indigo-500 text-indigo-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             }`}
                         >
-                            {tab.label}
+                            {tab}
                         </button>
                     ))}
                 </nav>
             </div>
-            <div className="pt-2">
-                {renderContent()}
-            </div>
-        </div>
-    );
-};
-
-const PartnerHelpCenterView: React.FC = () => {
-    const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-
-    const [newTicketData, setNewTicketData] = useState({
-        category: 'General Inquiry' as Ticket['category'],
-        subject: '',
-        description: '',
-    });
-
-    const handleOpenNewTicketModal = () => {
-        setNewTicketData({
-            category: 'General Inquiry',
-            subject: '',
-            description: '',
-        });
-        setIsModalOpen(true);
-        setSelectedTicket(null);
-    };
-    
-    const handleViewTicket = (ticket: Ticket) => {
-        setSelectedTicket(ticket);
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setSelectedTicket(null);
-    };
-
-    const handleNewTicketChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setNewTicketData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmitTicket = (e: React.FormEvent) => {
-        e.preventDefault();
-        const newTicket: Ticket = {
-            id: `TKT-P-${Date.now()}`,
-            submittedDate: new Date().toISOString(),
-            status: 'Open',
-            submittedBy: "Current Partner", // This would be dynamic in a real app
-            userType: UserType.PARTNER,
-            ...newTicketData,
-        };
-        setTickets(prev => [newTicket, ...prev]);
-        handleCloseModal();
-        alert('Your ticket has been submitted successfully.');
-    };
-
-    const getStatusClasses = (status: Ticket['status']) => {
-        switch (status) {
-            case 'Resolved': return 'bg-green-100 text-green-800';
-            case 'Open': return 'bg-blue-100 text-blue-800';
-            case 'In Progress': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    };
-    
-    const summaryStats = useMemo(() => {
-        const open = tickets.filter(t => t.status === 'Open' || t.status === 'In Progress').length;
-        const resolved = tickets.filter(t => t.status === 'Resolved').length;
-        return { open, resolved, total: tickets.length };
-    }, [tickets]);
-    
-    const modalTitle = selectedTicket ? `Details for Ticket ${selectedTicket.id}` : "Create New Ticket";
-
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h2 className="text-3xl font-bold text-gray-800">Partner Help Center</h2>
-                <Button variant="primary" onClick={handleOpenNewTicketModal}>
-                    + Create New Ticket
-                </Button>
-            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm"><h4 className="text-sm font-semibold text-gray-500">Total Tickets</h4><p className="text-3xl font-bold text-gray-900">{summaryStats.total}</p></div>
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm"><h4 className="text-sm font-semibold text-gray-500">Open</h4><p className="text-3xl font-bold text-blue-600">{summaryStats.open}</p></div>
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm"><h4 className="text-sm font-semibold text-gray-500">Resolved</h4><p className="text-3xl font-bold text-green-600">{summaryStats.resolved}</p></div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {tickets.length > 0 ? tickets.map(ticket => (
-                                <tr key={ticket.id}>
-                                    <td className="px-6 py-4 text-sm font-medium text-blue-600">{ticket.id}</td>
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{ticket.subject}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">{ticket.category}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">{new Date(ticket.submittedDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 inline-flex text-xs font-semibold rounded-full ${getStatusClasses(ticket.status)}`}>
-                                            {ticket.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <Button variant="ghost" size="sm" onClick={() => handleViewTicket(ticket)}>View</Button>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr><td colSpan={6} className="text-center py-10 text-gray-500">You have not raised any tickets yet.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+            {activeTab === 'Team & Roles' && <TeamRolesView onAddTeamMember={onAddTeamMember} />}
+            {activeTab === 'Permissions' && <PermissionsView permissions={permissions} setPermissions={setPermissions} />}
+            {activeTab === 'Role' && <RoleSettingsView />}
+            {activeTab === 'Panel Options' && panelConfig && <PanelConfigurationView config={panelConfig} onConfigChange={handlePanelConfigSave} />}
+            {activeTab === 'My Account' && <MyProfileView user={currentUser} profile={userProfile} setProfile={setUserProfile} />}
+            {activeTab === 'Branding' && (
+                <div className="bg-white p-8 rounded-lg shadow-md border border-gray-200">
+                    <PortalBrandingView branding={tempBranding} onBrandingChange={setTempBranding} onSave={handleBrandingSave} />
                 </div>
-            </div>
-            
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={modalTitle}>
-                {selectedTicket ? (
-                    <div className="space-y-4 text-sm">
-                        <div className="grid grid-cols-3 gap-2"><strong className="text-gray-600">Subject:</strong><span className="col-span-2">{selectedTicket.subject}</span></div>
-                        <div className="grid grid-cols-3 gap-2"><strong className="text-gray-600">Category:</strong><span className="col-span-2">{selectedTicket.category}</span></div>
-                        <div className="grid grid-cols-3 gap-2"><strong className="text-gray-600">Submitted:</strong><span className="col-span-2">{new Date(selectedTicket.submittedDate).toLocaleString()}</span></div>
-                        <div className="grid grid-cols-3 gap-2 items-center"><strong className="text-gray-600">Status:</strong><span className={`px-2 py-0.5 text-xs font-semibold rounded-full w-fit ${getStatusClasses(selectedTicket.status)}`}>{selectedTicket.status}</span></div>
-                        <div>
-                            <strong className="text-gray-600">Description:</strong>
-                            <p className="mt-1 p-3 bg-gray-50 rounded-md border">{selectedTicket.description}</p>
-                        </div>
-                        {selectedTicket.hrRemarks && (
-                            <div>
-                                <strong className="text-gray-600">HR Remarks:</strong>
-                                <p className="mt-1 p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200">{selectedTicket.hrRemarks}</p>
-                            </div>
-                        )}
-                        <div className="flex justify-end pt-4 border-t">
-                             <Button variant="primary" onClick={handleCloseModal}>Close</Button>
-                        </div>
-                    </div>
-                ) : (
-                    <form onSubmit={handleSubmitTicket} className="space-y-4">
-                        <div>
-                            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                            <select id="category" name="category" value={newTicketData.category} onChange={handleNewTicketChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
-                                <option>General Inquiry</option>
-                                <option>Payroll</option>
-                                <option>Attendance</option>
-                                <option>Documents</option>
-                                <option>Other</option>
-                            </select>
-                        </div>
-                        <Input id="subject" name="subject" label="Subject" value={newTicketData.subject} onChange={handleNewTicketChange} required />
-                        <div>
-                            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                            <textarea id="description" name="description" rows={5} value={newTicketData.description} onChange={handleNewTicketChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required />
-                        </div>
-                        <div className="flex justify-end gap-3 pt-4 border-t">
-                            <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
-                            <Button type="submit" variant="primary">Submit Ticket</Button>
-                        </div>
-                    </form>
-                )}
-            </Modal>
+            )}
         </div>
     );
 };
 
 
-// Main Component
 const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
   pipelineStats,
   vendorStats,
@@ -3827,9 +3718,10 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
   teamPerformance,
   jobs,
   onAddJob,
+  onUpdateJob,
   onDeleteJob,
-  currentLogoSrc,
-  onLogoUpload,
+  currentLogoSrc, 
+  onLogoUpload, 
   activeAdminMenuItem,
   onAdminMenuItemClick,
   userType,
@@ -3837,108 +3729,134 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
   onUpdateBranding,
   currentUser,
 }) => {
-  const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
+  const [isTeamMemberModalOpen, setIsTeamMemberModalOpen] = useState(false);
+  const [panelConfig, setPanelConfig] = useState<PanelConfig | null>(null);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState({ fullName: currentUser?.email || 'User', email: currentUser?.email || '', phone: '' });
 
-  // Lifted state for settings panels
-  const [jobRoles, setJobRoles] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('rkm_panel_job_roles') || '[]'); } catch { return []; }
-  });
-  const [locations, setLocations] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('rkm_panel_locations') || '[]'); } catch { return []; }
-  });
-  const [stores, setStores] = useState<{ id: string, name: string, location: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem('rkm_panel_stores') || '[]'); } catch { return []; }
-  });
-   const [vendors, setVendors] = useState<any[]>(() => {
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [config, vendorData] = await Promise.all([getPanelConfig(), getVendors()]);
+        setPanelConfig(config);
+        setVendors(vendorData);
+      } catch (error) {
+        console.error("Failed to fetch initial admin data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleUpdatePanelConfig = async (newConfig: PanelConfig) => {
     try {
-        const saved = localStorage.getItem('rkm_vendors');
-        return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
+      await updatePanelConfig(newConfig);
+      setPanelConfig(newConfig);
+      alert('Panel options saved!');
+    } catch (error) {
+      alert('Failed to save panel options.');
+    }
+  };
 
-  useEffect(() => { localStorage.setItem('rkm_panel_job_roles', JSON.stringify(jobRoles)); }, [jobRoles]);
-  useEffect(() => { localStorage.setItem('rkm_panel_locations', JSON.stringify(locations)); }, [locations]);
-  useEffect(() => { localStorage.setItem('rkm_panel_stores', JSON.stringify(stores)); }, [stores]);
-  useEffect(() => { localStorage.setItem('rkm_vendors', JSON.stringify(vendors)); }, [vendors]);
-
-  // Filter teamPerformance for TeamLead view
-  const isTeamLead = userType === UserType.TEAMLEAD;
-  const teamLeadTeamMembers = ['John Doe', 'Jane Smith']; // Mock data
-  const filteredTeamPerformance = isTeamLead
-    ? teamPerformance.filter(member => teamLeadTeamMembers.includes(member.teamMember))
-    : teamPerformance;
+  const handleAddTeamMember = (memberData: any) => {
+    console.log('New team member:', memberData);
+    alert('Team member added (demo).');
+    setIsTeamMemberModalOpen(false);
+  };
   
+  const AdminStatCards = useMemo(() => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <StatCard
+        title="Candidate Pipeline"
+        metrics={[
+          { label: "Active", value: pipelineStats.active, color: 'text-blue-600' },
+          { label: "Interview", value: pipelineStats.interview, color: 'text-yellow-600' },
+          { label: "Rejected", value: pipelineStats.rejected, color: 'text-red-600' },
+          { label: "Quit", value: pipelineStats.quit, color: 'text-gray-600' },
+        ]}
+      />
+      <StatCard title="Total Vendors" value={vendorStats.total} />
+      <StatCard
+        title="Partner Requirements"
+        value={partnerRequirementStats.total}
+        metrics={[
+          { label: "Pending", value: partnerRequirementStats.pending, color: 'text-yellow-600' },
+          { label: "Approved", value: partnerRequirementStats.approved, color: 'text-green-600' },
+        ]}
+        isSplitMetrics
+      />
+       <StatCard
+        title="Complaints"
+        value={complaintStats.active + complaintStats.closed}
+        metrics={[
+          { label: "Active", value: complaintStats.active, color: 'text-red-600' },
+          { label: "Closed", value: complaintStats.closed, color: 'text-green-600' },
+        ]}
+        isSplitMetrics
+      />
+    </div>
+  ), [pipelineStats, vendorStats, complaintStats, partnerRequirementStats]);
+
   const renderContent = () => {
     switch (activeAdminMenuItem) {
-      // Common Views for Admin, TeamLead, Team
       case AdminMenuItem.Dashboard:
         if (userType === UserType.HR) {
           return <HRDashboardView onNavigate={onAdminMenuItemClick} />;
         }
         if (userType === UserType.PARTNER) {
-          // Mocking some stats for the partner dashboard
-          const activeCandidatesCount = 0; // Example
-          const pendingInvoicesCount = 0; // Example
-          const supervisorsCount = 0; // Example
-          return <PartnerDashboardView 
-            onNavigate={onAdminMenuItemClick} 
-            partnerRequirementStats={partnerRequirementStats}
-            activeCandidatesCount={activeCandidatesCount}
-            pendingInvoicesCount={pendingInvoicesCount}
-            supervisorsCount={supervisorsCount}
-          />;
+            return (
+                <PartnerDashboardView 
+                    onNavigate={onAdminMenuItemClick}
+                    partnerRequirementStats={partnerRequirementStats}
+                    activeCandidatesCount={50} // Mock data
+                    pendingInvoicesCount={2} // Mock data
+                    supervisorsCount={5} // Mock data
+                />
+            );
         }
-        
+        // Default Admin / Team Lead Dashboard
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                title="Candidate Pipeline"
-                isSplitMetrics
-                metrics={[
-                  { label: "Active", value: pipelineStats.active, color: 'text-blue-600' },
-                  { label: "Interview", value: pipelineStats.interview, color: 'text-indigo-600' },
-                  { label: "Rejected", value: pipelineStats.rejected, color: 'text-red-600' },
-                  { label: "Quit", value: pipelineStats.quit, color: 'text-gray-600' },
-                ]}
-              />
-              <StatCard title="Total Vendors" value={vendorStats.total} />
-              <StatCard
-                title="Complaints"
-                metrics={[
-                  { label: "Active", value: complaintStats.active, color: 'text-red-600' },
-                  { label: "Closed", value: complaintStats.closed, color: 'text-green-600' },
-                ]}
-              />
-               <div className="cursor-pointer hover:shadow-lg transition-shadow rounded-xl" onClick={() => onAdminMenuItemClick(AdminMenuItem.PartnerRequirementsDetail)}>
-                   <StatCard
-                       title="Requirements Update"
-                       metrics={[
-                         { label: "Total", value: partnerRequirementStats.total, color: 'text-blue-600' },
-                         { label: "Pending", value: partnerRequirementStats.pending, color: 'text-yellow-600' },
-                         { label: "Approved", value: partnerRequirementStats.approved, color: 'text-green-600' },
-                       ]}
-                   />
-               </div>
+             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
+                <Button variant="primary" onClick={() => onAdminMenuItemClick(AdminMenuItem.ManageJobBoard)}>+ Post New Job</Button>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
-                <ProgressBarCard title="Candidates by Process" data={candidatesByProcess} />
-              </div>
-              <div className="lg:col-span-1">
-                <ProgressBarCard title="Candidates by Role" data={candidatesByRole} />
-              </div>
-               <div className="lg:col-span-1">
-                 {[UserType.ADMIN, UserType.TEAM, UserType.TEAMLEAD].includes(userType) && <HRSummaryCard onNavigate={onAdminMenuItemClick} />}
-               </div>
+            {AdminStatCards}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ProgressBarCard title="Candidates by Process" data={candidatesByProcess} />
+              <ProgressBarCard title="Candidates by Role" data={candidatesByRole} />
             </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                 <h3 className="text-xl font-semibold text-gray-800">Team Performance</h3>
-              </div>
-              <TeamPerformanceTable data={filteredTeamPerformance} />
-              <AddTeamMemberModal isOpen={isAddTeamMemberModalOpen} onClose={() => setIsAddTeamMemberModalOpen(false)} onSave={(data) => console.log(data)} availableLocations={locations} availableVendors={vendors.map(v => v.name)} />
-            </div>
+            { (userType === UserType.ADMIN || userType === UserType.TEAMLEAD) && 
+                <div className="flex justify-end">
+                    <Button variant='secondary' onClick={() => onAdminMenuItemClick(AdminMenuItem.PartnerRequirementsDetail)}>
+                        View Requirements Breakdown
+                    </Button>
+                </div>
+            }
+            <TeamWiseTable />
+            <TeamPerformanceTable data={teamPerformance} />
+             {userType === UserType.ADMIN && (
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">Team Members</h3>
+                        <Button variant="primary" size="sm" onClick={() => setIsTeamMemberModalOpen(true)}>
+                            + Add Team Member
+                        </Button>
+                    </div>
+                </div>
+            )}
+            
+            <AddTeamMemberModal 
+                isOpen={isTeamMemberModalOpen} 
+                onClose={() => setIsTeamMemberModalOpen(false)} 
+                onSave={handleAddTeamMember}
+                availableLocations={panelConfig?.locations || []}
+                availableVendors={vendors.map(v => v.brandName)}
+            />
+
           </div>
         );
       case AdminMenuItem.DailyLineups:
@@ -3955,44 +3873,29 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
         return <WarningLettersView />;
       case AdminMenuItem.Reports:
         return <ReportsView userType={userType} currentUser={currentUser} />;
-      
-      // Admin Only Views
       case AdminMenuItem.ManageJobBoard:
-        return <JobBoardView jobs={jobs} onAddJob={onAddJob} onDeleteJob={onDeleteJob} />;
+        return <JobBoardView jobs={jobs} onAddJob={onAddJob} onUpdateJob={onUpdateJob} onDeleteJob={onDeleteJob} vendors={vendors} panelConfig={panelConfig} />;
       case AdminMenuItem.VendorDirectory:
-        return <VendorDirectoryView vendors={vendors} setVendors={setVendors} />;
+        return <VendorDirectoryView vendors={vendors} setVendors={setVendors} isLoading={isLoading} panelConfig={panelConfig} />;
       case AdminMenuItem.DemoRequests:
         return <DemoRequestsView />;
       case AdminMenuItem.Revenue:
         return <RevenueView />;
       case AdminMenuItem.Settings:
         return (
-            <>
-                <SettingsView 
-                    userType={userType} 
-                    branding={branding} 
-                    onUpdateBranding={onUpdateBranding} 
-                    onLogoUpload={onLogoUpload}
-                    currentUser={currentUser}
-                    jobs={jobs}
-                    onAddJob={onAddJob}
-                    onDeleteJob={onDeleteJob}
-                    onAddTeamMemberClick={() => setIsAddTeamMemberModalOpen(true)}
-                    jobRoles={jobRoles} setJobRoles={setJobRoles}
-                    locations={locations} setLocations={setLocations}
-                    stores={stores} setStores={setStores}
-                />
-                <AddTeamMemberModal 
-                    isOpen={isAddTeamMemberModalOpen} 
-                    onClose={() => setIsAddTeamMemberModalOpen(false)} 
-                    onSave={(data) => { console.log(data); alert('Team member added!'); }} 
-                    availableLocations={locations}
-                    availableVendors={vendors.map(v => v.name)}
-                />
-            </>
+          <SettingsView
+            branding={branding}
+            onUpdateBranding={onUpdateBranding}
+            onLogoUpload={onLogoUpload}
+            currentUser={currentUser}
+            panelConfig={panelConfig}
+            onUpdatePanelConfig={handleUpdatePanelConfig}
+            userProfile={userProfile}
+            setUserProfile={setUserProfile}
+            onAddTeamMember={() => setIsTeamMemberModalOpen(true)}
+          />
         );
-
-      // HR Views
+      // New HR Items
       case AdminMenuItem.ManagePayroll:
         return <ManagePayrollView />;
       case AdminMenuItem.GenerateOfferLetter:
@@ -4004,40 +3907,36 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
       case AdminMenuItem.EmployeeManagement:
         return <EmployeeManagementView />;
       case AdminMenuItem.MyProfile:
-        return <MyProfileView user={currentUser} profile={{}} setProfile={()=>{}} />; // This will be handled by SettingsView
-        
-      // Partner Views
-      case AdminMenuItem.PartnerActiveCandidates:
-        return <PartnerActiveCandidatesView />;
+        return <MyProfileView user={currentUser} profile={userProfile} setProfile={setUserProfile} />;
+      // New Partner Items
       case AdminMenuItem.PartnerUpdateStatus:
         return <PartnerUpdateStatusView />;
+      case AdminMenuItem.PartnerActiveCandidates:
+        return <PartnerActiveCandidatesView />;
+      case AdminMenuItem.ManageSupervisors:
+        return <PartnerManageSupervisorsView />;
       case AdminMenuItem.PartnerRequirements:
         return <PartnerRequirementsView />;
-      case AdminMenuItem.PartnerRequirementsDetail:
-        return <PartnerRequirementsDetailView onBack={() => onAdminMenuItemClick(AdminMenuItem.Dashboard)} />;
       case AdminMenuItem.PartnerInvoices:
         return <PartnerInvoicesView />;
       case AdminMenuItem.PartnerSalaryUpdates:
         return <PartnerSalaryUpdatesView />;
-      case AdminMenuItem.ManageSupervisors:
-        return <PartnerManageSupervisorsView />;
       case AdminMenuItem.PartnerHelpCenter:
-        return <PartnerHelpCenterView />;
-
-      // Supervisor Views
+        return <HelpCenterView />;
+      case AdminMenuItem.PartnerRequirementsDetail:
+        return <PartnerRequirementsDetailView onBack={() => onAdminMenuItemClick(AdminMenuItem.Dashboard)} />;
+      // New Supervisor Items
       case AdminMenuItem.SupervisorDashboard:
         return <SupervisorDashboardView />;
       case AdminMenuItem.StoreAttendance:
         return <StoreAttendanceView />;
       case AdminMenuItem.StoreEmployees:
         return <StoreEmployeesView />;
-
-// FIX: Complete the truncated file causing a syntax error.
       default:
         return (
-          <div className="text-center p-8">
-            <h2 className="text-2xl font-bold">Content for {activeAdminMenuItem}</h2>
-            <p className="mt-2 text-gray-600">This view has not been implemented yet.</p>
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold text-gray-800">Content Not Available</h2>
+            <p className="mt-2 text-gray-500">The view for "{activeAdminMenuItem}" is not yet implemented.</p>
           </div>
         );
     }

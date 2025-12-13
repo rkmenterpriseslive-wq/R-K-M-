@@ -10,11 +10,9 @@ import {
   TeamMemberPerformance,
   AdminMenuItem,
   DashboardProps,
-  CandidateMenuItem
+  CandidateMenuItem,
+  PartnerRequirementStats
 } from '../types';
-import JobPostingForm from './JobPostingForm';
-import JobList from './JobList';
-import LogoUploader from './LogoUploader';
 import AdminLayout from './admin/AdminLayout';
 import AdminDashboardContent from './admin/AdminDashboardContent';
 import CandidateLayout from './candidate/CandidateLayout';
@@ -50,17 +48,17 @@ const Dashboard: React.FC<DashboardProps> = ({
       case UserType.ADMIN:
       case UserType.HR:
       case UserType.PARTNER:
-      case UserType.TEAMLEAD: // Team Leads now use the AdminLayout
-      case UserType.STORE_SUPERVISOR: // Supervisors now use the AdminLayout
-      case UserType.TEAM: // Team Members now use the AdminLayout
+      case UserType.TEAMLEAD:
+      case UserType.STORE_SUPERVISOR:
+      case UserType.TEAM:
         return (
           <AdminLayout
-            userType={userType} // Pass userType to AdminLayout
+            userType={userType}
             currentLogoSrc={currentLogoSrc}
             onLogoUpload={onLogoUpload}
             onLogout={onLogout}
-            activeAdminMenuItem={activeAdminMenuItem} // Pass active menu item
-            onAdminMenuItemClick={onAdminMenuItemClick} // Pass click handler
+            activeAdminMenuItem={activeAdminMenuItem}
+            onAdminMenuItemClick={onAdminMenuItemClick}
           >
             <AdminDashboardContent
               pipelineStats={pipelineStats}
@@ -75,9 +73,9 @@ const Dashboard: React.FC<DashboardProps> = ({
               onDeleteJob={onDeleteJob}
               currentLogoSrc={currentLogoSrc} 
               onLogoUpload={onLogoUpload} 
-              activeAdminMenuItem={activeAdminMenuItem} // Pass active menu item for conditional rendering
-              onAdminMenuItemClick={onAdminMenuItemClick} // Pass handler down
-              userType={userType} // Pass userType for section filtering
+              activeAdminMenuItem={activeAdminMenuItem}
+              onAdminMenuItemClick={onAdminMenuItemClick}
+              userType={userType}
               branding={branding}
               onUpdateBranding={onUpdateBranding}
               currentUser={currentUser}
@@ -100,20 +98,16 @@ const Dashboard: React.FC<DashboardProps> = ({
           </CandidateLayout>
         );
       default:
+        // Fallback for any other user type, or if userType is somehow NONE
         return (
-          <div className="p-6 md:p-8 text-center text-gray-600">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome!</h2>
-            <p>Please log in to access your dashboard.</p>
+          <div className="flex items-center justify-center h-screen">
+            <p>Loading your dashboard...</p>
           </div>
         );
     }
   };
 
-  return (
-    <main className="flex-grow"> {/* Removed container mx-auto mt-8 as AdminLayout will handle structure */}
-      {renderDashboardContent()}
-    </main>
-  );
+  return <>{renderDashboardContent()}</>;
 };
 
 export default Dashboard;

@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 
 export enum UserType {
@@ -357,6 +356,20 @@ export interface BrandingConfig {
   becomePartner: BannerConfig;
 }
 
+// NEW PANEL CONFIG TYPES
+export interface Store {
+  id: string;
+  name: string;
+  location: string;
+}
+
+export interface PanelConfig {
+  jobRoles: string[];
+  locations: string[];
+  stores: Store[];
+}
+
+
 export interface HomePageProps {
   jobs: Job[];
   onApplyNow: (job: Job) => void;
@@ -370,6 +383,7 @@ export interface DashboardProps { // Updated DashboardProps to match App.tsx and
   userType: UserType;
   jobs: Job[];
   onAddJob: (job: Omit<Job, 'id' | 'postedDate' | 'adminId'>) => void;
+  onUpdateJob: (job: Job) => void;
   onDeleteJob: (id: string) => void;
   currentLogoSrc: string | null;
   onLogoUpload: (base64Image: string) => void;
@@ -419,6 +433,7 @@ export interface AdminDashboardContentProps {
   teamPerformance: TeamMemberPerformance[];
   jobs: Job[];
   onAddJob: (job: Omit<Job, 'id' | 'postedDate' | 'adminId'>) => void;
+  onUpdateJob: (job: Job) => void;
   onDeleteJob: (id: string) => void;
   currentLogoSrc: string | null;
   onLogoUpload: (base64Image: string) => void;
@@ -432,7 +447,7 @@ export interface AdminDashboardContentProps {
 
 export interface LoginPanelProps {
   userType: UserType; // The requested user type for login
-  onLoginSuccess: (user: AppUser) => void; // Callback on successful login with AppUser
+  onLoginSuccess: () => void; // Callback on successful login
   onLoginError: (message: string) => void; // Callback on login error
   initialIsSignUp?: boolean; // New prop to force signup mode initially
 }

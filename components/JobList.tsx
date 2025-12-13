@@ -11,12 +11,91 @@ interface JobListProps {
 }
 
 const JobList: React.FC<JobListProps> = ({ jobs, currentUserType, onDeleteJob, onApplyNow }) => {
-  const isAdmin = currentUserType === UserType.ADMIN;
+  const isAdminView = !!onDeleteJob && (currentUserType === UserType.ADMIN || currentUserType === UserType.HR);
 
+  const getLogo = (job: Job) => {
+    if (job.companyLogoSrc) return job.companyLogoSrc;
+    const company = job.company.toLowerCase();
+    if (company.includes('amazon')) return 'https://logos-world.net/wp-content/uploads/2021/02/Amazon-Fresh-Logo.png';
+    if (company.includes('zepto')) return 'https://media.licdn.com/dms/image/C4D0BAQG18sQCXpMEtA/company-logo_200_200/0/1652344793834?e=2147483647&v=beta&t=U-Wq_d_uF9I5JKl5rY2-2h4Tf2G5-GgXlP0iR4qGg_I';
+    return `https://ui-avatars.com/api/?name=${job.company.charAt(0)}&color=7F9CF5&background=EBF4FF`;
+  };
+
+  if (isAdminView) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="w-1/3 px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Title</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Process</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {jobs.length > 0 ? jobs.map((job) => (
+                <tr key={job.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <img className="h-10 w-10 rounded-md object-contain p-1 border border-gray-100 bg-white" src={getLogo(job)} alt={`${job.company} logo`} />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{job.title}</div>
+                        <div className="text-sm text-gray-500">{job.company}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{job.jobType}</div>
+                    <div className="text-sm text-gray-500">{job.numberOfOpenings} openings</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{job.jobCity}</div>
+                    <div className="text-sm text-gray-500">{job.locality}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(job.postedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-4">
+                          <button className="text-gray-500 hover:text-blue-600 font-medium">Edit</button>
+                          {onDeleteJob && (
+                               <button onClick={() => onDeleteJob(job.id)} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-xs font-medium">
+                                  Delete
+                               </button>
+                          )}
+                      </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-24 text-center text-gray-500">
+                    No jobs posted yet. Start by posting a new job!
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // PUBLIC/CANDIDATE VIEW (CARDS)
   if (jobs.length === 0) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-600">
-        No jobs posted yet. {isAdmin && 'Start by posting a new job!'}
+        No jobs posted yet.
       </div>
     );
   }
@@ -31,9 +110,8 @@ const JobList: React.FC<JobListProps> = ({ jobs, currentUserType, onDeleteJob, o
             </div>
           )}
           <div>
-            <div className="flex justify-between items-start mb-2 pr-16"> {/* Add padding-right to avoid overlap with logo */}
+            <div className="flex justify-between items-start mb-2 pr-16">
               <h4 className="text-lg font-bold text-gray-900">{job.title}</h4>
-              {/* Experience Level moved to the bottom row */}
             </div>
             <p className="text-gray-600 text-sm">{job.company}</p>
             <p className="text-gray-600 text-sm flex items-center mt-1">
@@ -45,6 +123,11 @@ const JobList: React.FC<JobListProps> = ({ jobs, currentUserType, onDeleteJob, o
             </p>
             <p className="text-gray-700 text-sm flex items-center mt-1">
               <span className="mr-1 text-gray-500">₹</span> {job.salaryRange}
+              {job.incentive && (
+                <span className="ml-2 bg-green-100 text-green-800 text-xs font-semibold px-2 py-0.5 rounded">
+                  + {job.incentive}
+                </span>
+              )}
             </p>
             <p className="text-gray-700 text-sm flex items-center mt-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -53,18 +136,14 @@ const JobList: React.FC<JobListProps> = ({ jobs, currentUserType, onDeleteJob, o
               Openings: {job.numberOfOpenings}
             </p>
           </div>
-          <div className="mt-4 flex items-center justify-between"> {/* Changed to justify-between to space out items */}
+          <div className="mt-4 flex items-center justify-between">
             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
               job.experienceLevel === 'Fresher' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
             }`}>
               {job.experienceLevel}
             </span>
-            {isAdmin && onDeleteJob ? (
-              <Button variant="danger" size="sm" onClick={() => onDeleteJob(job.id)}>
-                Delete
-              </Button>
-            ) : (
-              <Button variant="primary" size="md" onClick={() => onApplyNow?.(job)}>
+            {onApplyNow && (
+              <Button variant="primary" size="md" onClick={() => onApplyNow(job)}>
                 Apply Now
               </Button>
             )}

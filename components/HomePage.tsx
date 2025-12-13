@@ -125,17 +125,19 @@ const HomePage: React.FC<HomePageProps> = ({ jobs, onApplyNow, currentUserType, 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Banner 1: Hire Talent / Post a Job */}
           <div
-            className="relative h-64 rounded-xl flex items-end justify-start text-white text-left cursor-pointer hover:shadow-2xl transition-all duration-300 overflow-hidden group"
+            className="relative h-64 rounded-xl flex items-end justify-start text-white text-left cursor-pointer hover:shadow-2xl transition-all duration-300 overflow-hidden group bg-blue-700"
             onClick={handleHireBannerClick}
             role="button"
             tabIndex={0}
             aria-label="Post a job or partner with us"
           >
-            <img
-              src={branding.hireTalent.backgroundImage || "https://picsum.photos/seed/hiring/1200/400"}
-              alt="People collaborating in an office"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            />
+            {branding.hireTalent.backgroundImage && (
+                <img
+                  src={branding.hireTalent.backgroundImage}
+                  alt="People collaborating in an office"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
             <div className="relative z-10 p-8 w-full">
               <span className="inline-block px-3 py-1 mb-3 text-xs font-bold tracking-wider text-white uppercase bg-blue-600 rounded-full shadow-sm">
@@ -152,17 +154,19 @@ const HomePage: React.FC<HomePageProps> = ({ jobs, onApplyNow, currentUserType, 
 
           {/* Banner 2: Become a Partner */}
           <div
-            className="relative h-64 rounded-xl flex items-end justify-start text-white text-left cursor-pointer hover:shadow-2xl transition-all duration-300 overflow-hidden group"
+            className="relative h-64 rounded-xl flex items-end justify-start text-white text-left cursor-pointer hover:shadow-2xl transition-all duration-300 overflow-hidden group bg-green-700"
             onClick={handlePartnerBannerClick}
             role="button"
             tabIndex={0}
             aria-label="Become a partner or vendor"
           >
-            <img
-              src={branding.becomePartner.backgroundImage || "https://picsum.photos/seed/partners/1200/400"}
-              alt="Handshake or business meeting"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            />
+            {branding.becomePartner.backgroundImage && (
+                <img
+                  src={branding.becomePartner.backgroundImage}
+                  alt="Handshake or business meeting"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
             <div className="relative z-10 p-8 w-full">
               <span className="inline-block px-3 py-1 mb-3 text-xs font-bold tracking-wider text-white uppercase bg-green-600 rounded-full shadow-sm">

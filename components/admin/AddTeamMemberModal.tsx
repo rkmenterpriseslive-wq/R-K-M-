@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Modal from '../Modal';
 import Input from '../Input';
@@ -19,7 +20,6 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
         mobile: '',
         salary: '0',
         role: '',
-        post: '',
         reportingManager: '',
         workingLocations: [],
         vendors: [],
@@ -63,15 +63,6 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
                             <option>Recruiter</option>
                             <option>Team Lead</option>
                             <option>HR Manager</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label htmlFor="post" className="block text-sm font-medium text-gray-700 mb-1">Post</label>
-                        <select id="post" name="post" value={formData.post} onChange={handleChange} className={selectStyles}>
-                            <option value="">Select Post</option>
-                            <option>Senior Recruiter</option>
-                            <option>Junior Recruiter</option>
-                            <option>HR Executive</option>
                         </select>
                     </div>
                      <div className="md:col-span-2">

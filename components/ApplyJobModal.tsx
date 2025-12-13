@@ -1,10 +1,10 @@
-
 import React, { useState, FC, useMemo, useRef } from 'react';
 import Modal from './Modal';
 import Input from './Input';
 import Button from './Button';
 import { ApplyJobModalProps } from '../types';
-import { supabase } from '../services/supabaseClient';
+import { signUpUser, mapAuthError } from '../services/firebaseService';
+import { AuthError } from 'firebase/auth';
 
 // Icons defined locally for simplicity
 const BriefcaseIcon: FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2v-6a2 2 0 00-2-2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12V6a4 4 0 00-4-4H8a4 4 0 00-4 4v6" /></svg>;
@@ -48,23 +48,13 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job }) => {
         }
 
         setLoading(true);
+        
         try {
-            const { data, error } = await supabase.auth.signUp({
-                email: email,
-                password: loginCode,
-                options: {
-                    data: {
-                        full_name: fullName,
-                        phone: mobileNumber,
-                    }
-                }
-            });
-
-            if (error) {
-                throw error;
-            }
-
-            alert('Application submitted successfully! A confirmation link has been sent to your email. Please verify your account to log in.');
+            // Create a Firebase user with email and the 6-digit code as password
+            await signUpUser(email, loginCode);
+            // Firebase automatically signs in the new user, and the onAuthChange listener in App.tsx will handle the state update.
+            
+            alert('Application submitted successfully! Your account has been created, and you are now logged in.');
             
             onClose();
             // Reset form
@@ -77,12 +67,10 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job }) => {
             setResumeFile(null);
 
         } catch (error: any) {
+            const authError = error as AuthError;
+            const friendlyMessage = mapAuthError(authError);
             console.error("Error submitting application:", error);
-            if (error.message.includes('User already registered')) {
-                alert('An account with this email already exists. Please log in using the Employee Login panel.');
-            } else {
-                alert(`Submission failed: ${error.message}`);
-            }
+            alert(`Application failed: ${friendlyMessage}`);
         } finally {
             setLoading(false);
         }
@@ -95,7 +83,7 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job }) => {
             isOpen={isOpen} 
             onClose={onClose} 
             title="Apply for Job"
-            description="Submit your application to join our team."
+            description="Submit your application to join our team. This will also create an account for you."
             maxWidth="max-w-lg"
         >
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -110,7 +98,7 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job }) => {
                 <Input id="fullName" label="Full Name *" icon={<PersonIcon />} value={fullName} onChange={e => setFullName(e.target.value)} required />
                 <Input id="mobileNumber" label="Mobile Number *" type="tel" icon={<PhoneIcon />} value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required />
                 <Input id="email" label="Email ID *" type="email" icon={<EmailIcon />} value={email} onChange={e => setEmail(e.target.value)} required />
-                <Input id="loginCode" label="Set 6-digit login code *" type="text" maxLength={6} icon={<KeyIcon />} value={loginCode} onChange={e => setLoginCode(e.target.value.replace(/\D/g, ''))} required />
+                <Input id="loginCode" label="Set 6-digit login code (as password) *" type="text" maxLength={6} icon={<KeyIcon />} value={loginCode} onChange={e => setLoginCode(e.target.value.replace(/\D/g, ''))} required />
 
                 <div>
                     <label htmlFor="selectRole" className="block text-sm font-medium text-gray-700 mb-1">Select Role *</label>
@@ -141,7 +129,7 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job }) => {
 
                 <div className="pt-4">
                     <Button type="submit" className="w-full justify-center" loading={loading}>
-                        Submit Application
+                        Submit Application & Create Account
                     </Button>
                 </div>
             </form>
