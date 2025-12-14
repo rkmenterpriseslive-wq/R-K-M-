@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export enum UserType {
@@ -40,11 +39,62 @@ export interface Job {
   incentive?: string;
 }
 
+// CV-related interfaces
+export interface Experience { id: number; role: string; company: string; duration: string; description: string; }
+export interface Education { id: number; degree: string; university: string; duration: string; }
+
+// New Document interface for My Documents page
+export interface Document {
+  id: string;
+  name: string;
+  status: 'Not Uploaded' | 'Uploaded' | 'Verified';
+  fileName: string | null;
+}
+
 // Updated User interface to reflect App User properties
 export interface AppUser {
   uid: string;
   email: string | null;
   userType: UserType; // Determined by app logic
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  userType: UserType;
+  name?: string;
+  phone?: string;
+  // CV Fields
+  address?: string;
+  summary?: string;
+  skills?: string;
+  experiences?: Experience[];
+  educations?: Education[];
+  isCvComplete?: boolean;
+  
+  // New Personal Details
+  fatherName?: string;
+  dob?: string;
+  nationality?: string;
+  gender?: 'Male' | 'Female' | 'Other' | '';
+  maritalStatus?: 'Single' | 'Married' | 'Divorced' | 'Widowed' | '';
+  languagesKnown?: string;
+  
+  // New Declaration Fields
+  declarationDate?: string;
+  declarationPlace?: string;
+
+  // New fields from MyDocuments
+  uan?: string;
+  esi?: string;
+  familyMembers?: FamilyMember[];
+  onboardingStatus?: 'Pending Submission' | 'Pending Verification' | 'Onboarding Complete';
+  esiCardFileName?: string | null;
+  documents?: Document[];
+
+  // Partner-specific fields
+  vendorName?: string;
+  partnerName?: string;
 }
 
 // New Employee Interface
@@ -132,6 +182,7 @@ export interface RoleMetric {
 
 export interface TeamMemberPerformance {
   teamMember: string;
+  role: string;
   total: number;
   selected: number;
   pending: number;
@@ -179,7 +230,7 @@ export enum AdminMenuItem {
 
 // New enum for Candidate panel
 export enum CandidateMenuItem {
-  ApplyJobs = 'Apply Jobs',
+  MyJobs = 'My Jobs',
   MyDocuments = 'My Documents',
   MyProfile = 'My Profile',
   CVGenerator = 'CV Generator',
@@ -190,6 +241,30 @@ export enum CandidateMenuItem {
   Resign = 'Resign',
   HelpCenter = 'Help Center',
 }
+
+export type CandidateStatus = 'Sourced' | 'On the way' | 'Interview' | 'Selected' | 'Rejected' | 'Quit' | 'Hired' | 'Screening' | 'Offer Sent';
+
+export interface CandidateDocument {
+  name: string;
+  status: 'Not Uploaded' | 'Uploaded' | 'Verified';
+  fileName: string | null;
+}
+
+export interface Candidate {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  role: string;
+  status: CandidateStatus;
+  date: string; // Application/Sourced date
+  recruiter: string;
+  vendor?: string;
+  storeName: string;
+  quitDate?: string | null;
+  documents?: CandidateDocument[];
+}
+
 
 // New PartnerCandidate interface
 export interface PartnerCandidate {
@@ -286,6 +361,7 @@ export interface StoreSupervisor {
 
 // New Complaint Interface
 export interface Complaint {
+  id: string; // Firebase key
   ticketNo: string;
   candidate: string;
   vendor: string;
@@ -294,11 +370,13 @@ export interface Complaint {
   description?: string;
   status: 'Active' | 'Closed';
   date: string;
-  manager: string;
+  assignedManager: string;
+  resolution?: string; // Notes on resolution
 }
 
 // New WarningLetter Interface
 export interface WarningLetter {
+  id: string; // Firebase key
   ticketNo: string;
   employeeName: string;
   reason: string;
@@ -307,6 +385,18 @@ export interface WarningLetter {
   issuedBy: string;
   status: 'Active' | 'Resolved';
 }
+
+// New DemoRequest Interface
+export interface DemoRequest {
+  id: string; // Firebase key
+  companyName: string;
+  email: string;
+  address: string;
+  teamHead: string;
+  teamSize: string;
+  requestDate: string; // ISO string
+}
+
 
 // New FamilyMember interface for My Documents page
 export interface FamilyMember {
@@ -367,6 +457,39 @@ export interface PanelConfig {
   jobRoles: string[];
   locations: string[];
   stores: Store[];
+  emailNotifications?: boolean;
+  maintenanceMode?: boolean;
+}
+
+export type CallStatus = 'Applied' | 'Interested' | 'Connected' | 'No Answer' | 'Not Interested' | 'Callback' | 'Already Call';
+
+export interface DailyLineup {
+    id: string;
+    candidateName: string;
+    contact: string;
+    vendor: string;
+    role: string;
+    location: string;
+    storeName: string;
+    submittedBy: string;
+    callStatus: CallStatus;
+    interviewDateTime: string | null;
+    createdAt: string; // For sorting
+}
+
+// New types for Attendance
+export type AttendanceStatus = 'Present' | 'Absent' | 'Leave' | 'Week Off';
+
+export interface CommissionAttendanceRecord {
+    presentDays: number;
+    totalDays: number;
+    commission: number;
+}
+
+export interface StoreAttendanceRecord {
+  employeeId: string;
+  date: string; // YYYY-MM-DD
+  status: AttendanceStatus;
 }
 
 
@@ -401,10 +524,14 @@ export interface DashboardProps { // Updated DashboardProps to match App.tsx and
   branding: BrandingConfig; // Added branding config
   onUpdateBranding: (branding: BrandingConfig) => void; // Added branding update handler
   currentUser?: AppUser | null; // Added currentUser prop
+  currentUserProfile?: UserProfile | null;
   // New props for candidate
   activeCandidateMenuItem: CandidateMenuItem;
   onCandidateMenuItemClick: (item: CandidateMenuItem) => void;
   onApplyNow: (job: Job) => void;
+  isCvComplete?: boolean;
+  onCvCompletion: (cvData: Partial<UserProfile>) => void;
+  onProfileUpdate: (profileData: Partial<UserProfile>) => void;
 }
 
 export interface AdminLayoutProps {
@@ -443,6 +570,8 @@ export interface AdminDashboardContentProps {
   branding: BrandingConfig; // Added branding config
   onUpdateBranding: (branding: BrandingConfig) => void; // Added branding update handler
   currentUser?: AppUser | null; // Added currentUser prop
+  // FIX: Add currentUserProfile to pass detailed user data for components like MyProfileView.
+  currentUserProfile?: UserProfile | null;
 }
 
 export interface LoginPanelProps {
@@ -450,6 +579,14 @@ export interface LoginPanelProps {
   onLoginSuccess: () => void; // Callback on successful login
   onLoginError: (message: string) => void; // Callback on login error
   initialIsSignUp?: boolean; // New prop to force signup mode initially
+}
+
+// FIX: Add missing ApplyJobModalProps interface
+export interface ApplyJobModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  job: Job | null;
+  currentUserProfile?: UserProfile | null;
 }
 
 
@@ -460,23 +597,22 @@ export interface CandidateLayoutProps {
   onLogout: () => void;
   activeCandidateMenuItem: CandidateMenuItem;
   onCandidateMenuItemClick: (item: CandidateMenuItem) => void;
+  isCvComplete: boolean;
 }
 
 export interface CandidateSidebarProps {
   activeItem: CandidateMenuItem;
   onItemClick: (item: CandidateMenuItem) => void;
+  isCvComplete: boolean;
 }
 
 export interface CandidateDashboardContentProps {
   activeCandidateMenuItem: CandidateMenuItem;
   jobs: Job[];
   onApplyNow: (job: Job) => void;
-}
-
-export interface ApplyJobModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  job: Job | null;
+  onCvCompletion: (cvData: Partial<UserProfile>) => void;
+  onProfileUpdate: (profileData: Partial<UserProfile>) => void;
+  currentUserProfile?: UserProfile | null;
 }
 
 // New Resignation Interface

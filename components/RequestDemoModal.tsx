@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import Input from './Input';
 import Button from './Button';
+import { addDemoRequest } from '../services/firebaseService';
 
 interface RequestDemoModalProps {
     isOpen: boolean;
@@ -21,12 +22,11 @@ const RequestDemoModal: React.FC<RequestDemoModalProps> = ({ isOpen, onClose }) 
     const [teamSize, setTeamSize] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            console.log({ companyName, email, address, teamHead, teamSize });
+        try {
+            await addDemoRequest({ companyName, email, address, teamHead, teamSize });
             alert('Demo request submitted successfully! Our team will get in touch with you shortly.');
             setLoading(false);
             onClose();
@@ -36,7 +36,11 @@ const RequestDemoModal: React.FC<RequestDemoModalProps> = ({ isOpen, onClose }) 
             setAddress('');
             setTeamHead('');
             setTeamSize('');
-        }, 1000);
+        } catch (error) {
+            console.error("Failed to submit demo request:", error);
+            alert("An error occurred while submitting your request. Please try again.");
+            setLoading(false);
+        }
     };
 
     const baseInputStyles = 'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm';

@@ -177,9 +177,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick, userType }) 
   };
 
   return (
-    <aside className="w-56 bg-white border-r border-gray-200 text-gray-800 flex flex-col shadow-lg h-full z-20">
+    <aside className="w-48 bg-white border-r border-gray-200 text-gray-800 flex flex-col shadow-lg h-full z-20">
       <div className="flex items-center mb-4 px-6 pt-6 pb-2">
-        <span className="text-2xl font-extrabold text-[#1e293b] tracking-tight">R K M Career</span>
+        
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-2 flex flex-col">
         {getMenuContent()}

@@ -30,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({ userType, onLoginSelect, onLogout, onHi
                 onClick={() => onLoginSelect(UserType.CANDIDATE)}
                 className="border border-white text-white hover:bg-white/10 transform hover:-translate-y-0.5"
               >
-                Employee Login
+                Candidate Login
               </Button>
               <Button
                 variant="ghost"
@@ -54,11 +54,6 @@ const Header: React.FC<HeaderProps> = ({ userType, onLoginSelect, onLogout, onHi
               <span className="text-gray-300 font-medium px-3 py-2 rounded-md bg-white/10 flex items-center">
                 Logged in as: <span className="capitalize ml-1 text-white font-semibold">{userType.toLowerCase()}</span>
               </span>
-              {userType === UserType.ADMIN && (
-                <a href="#admin-jobs" className="px-3 py-2 text-gray-300 hover:text-white transition-colors duration-200">
-                  Admin Control
-                </a>
-              )}
               <Button variant="ghost" size="sm" onClick={onLogout} className="text-white border border-gray-400 hover:bg-white/10">
                 Logout
               </Button>

@@ -1,11 +1,9 @@
-import React, { useState, useMemo, FC } from 'react';
-import { PartnerRequirement } from '../../types';
+import React, { useState, useMemo, FC, useEffect } from 'react';
+import { PartnerRequirement, Job, AppUser, UserProfile } from '../../types';
 import Input from '../Input';
 import Button from '../Button';
 import Modal from '../Modal';
-
-// MOCK DATA has been removed.
-const MOCK_ASSIGNED_REQUIREMENTS: PartnerRequirement[] = [];
+import { onPartnerRequirementsChange, addPartnerRequirement } from '../../services/firebaseService';
 
 const getStatusClasses = (status: PartnerRequirement['submissionStatus']) => {
     switch (status) {
@@ -50,30 +48,42 @@ const RequirementForm: FC<{
     );
 };
 
-const PartnerRequirementsView: FC = () => {
-    const [assignedRequirements] = useState<PartnerRequirement[]>(MOCK_ASSIGNED_REQUIREMENTS);
+interface PartnerRequirementsViewProps {
+    currentUser?: AppUser | null;
+    currentUserProfile?: UserProfile | null;
+    jobs: Job[];
+}
+
+const PartnerRequirementsView: FC<PartnerRequirementsViewProps> = ({ currentUser, currentUserProfile, jobs }) => {
     const [myRequirements, setMyRequirements] = useState<PartnerRequirement[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const handleSubmitRequirement = (data: { role: string; client: string; location: string; count: number; }) => {
-        const newRequirement: PartnerRequirement = {
-            id: `SUB-${Date.now()}`,
-            title: data.role,
-            client: data.client,
-            location: data.location,
-            openings: data.count,
-            postedDate: new Date().toISOString(),
-            submissionStatus: 'Pending Review',
-            // Fields below are empty as they are submitted by partner for admin to fill
-            salary: '',
-            experience: '',
-            description: '',
-            jobType: '',
-            workingDays: '',
-            jobShift: '',
-        };
-        setMyRequirements(prev => [newRequirement, ...prev]);
-        setIsModalOpen(false);
+    useEffect(() => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        const unsubscribe = onPartnerRequirementsChange(currentUser.uid, (data) => {
+            setMyRequirements(data);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+
+    const assignedRequirements = useMemo(() => {
+        if (!currentUserProfile?.partnerName) return [];
+        return jobs.filter(job => job.company === currentUserProfile.partnerName);
+    }, [jobs, currentUserProfile]);
+
+    const handleSubmitRequirement = async (data: { role: string; client: string; location: string; count: number; }) => {
+        if (!currentUser) return;
+        try {
+            await addPartnerRequirement(currentUser.uid, data);
+            setIsModalOpen(false);
+            alert('Requirement submitted for review!');
+        } catch (error) {
+            console.error("Failed to submit requirement:", error);
+            alert("Error: Could not submit requirement.");
+        }
     };
 
     return (
@@ -103,7 +113,9 @@ const PartnerRequirementsView: FC = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {myRequirements.length > 0 ? myRequirements.map(req => (
+                            {isLoading ? (
+                                <tr><td colSpan={5} className="text-center py-10 text-gray-500">Loading your requirements...</td></tr>
+                            ) : myRequirements.length > 0 ? myRequirements.map(req => (
                                 <tr key={req.id}>
                                     <td className="px-6 py-4 font-medium text-gray-900">{req.title}</td>
                                     <td className="px-6 py-4 text-sm text-gray-600">
@@ -134,12 +146,12 @@ const PartnerRequirementsView: FC = () => {
                          <div key={req.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
                             <div>
                                 <h4 className="text-lg font-bold text-gray-900">{req.title}</h4>
-                                <p className="text-sm font-medium text-blue-600">{req.client}</p>
-                                <p className="text-sm text-gray-500 mt-1">{req.location}</p>
+                                <p className="text-sm font-medium text-blue-600">{req.company}</p>
+                                <p className="text-sm text-gray-500 mt-1">{req.jobCity}, {req.locality}</p>
                                 <div className="mt-3 space-y-2 text-sm text-gray-700 border-t pt-3">
-                                     <p><strong>Salary:</strong> {req.salary}</p>
-                                     <p><strong>Experience:</strong> {req.experience}</p>
-                                     <p><strong>Openings:</strong> {req.openings}</p>
+                                     <p><strong>Salary:</strong> {req.salaryRange}</p>
+                                     <p><strong>Experience:</strong> {req.experienceLevel}</p>
+                                     <p><strong>Openings:</strong> {req.numberOfOpenings}</p>
                                 </div>
                             </div>
                             <div className="mt-4 flex justify-end">

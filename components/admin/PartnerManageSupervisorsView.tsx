@@ -1,11 +1,10 @@
-import React, { useState, useMemo, FC } from 'react';
+
+import React, { useState, useMemo, FC, useEffect } from 'react';
 import { StoreSupervisor } from '../../types';
 import Button from '../Button';
 import Input from '../Input';
 import Modal from '../Modal';
-
-// --- MOCK DATA ---
-const MOCK_SUPERVISORS: StoreSupervisor[] = [];
+import { createSupervisor, onSupervisorsChange, updateSupervisor } from '../../services/firebaseService';
 
 // --- SUB-COMPONENTS ---
 const SupervisorForm: FC<{
@@ -34,7 +33,7 @@ const SupervisorForm: FC<{
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <Input id="name" name="name" label="Full Name" value={formData.name || ''} onChange={handleChange} required />
-            <Input id="email" name="email" label="Email Address" type="email" value={formData.email || ''} onChange={handleChange} required />
+            <Input id="email" name="email" label="Email Address (This will be their login ID)" type="email" value={formData.email || ''} onChange={handleChange} required disabled={!!supervisor} />
             <Input id="phone" name="phone" label="Phone Number" type="tel" value={formData.phone || ''} onChange={handleChange} required />
             <Input id="storeLocation" name="storeLocation" label="Store Location / Address" value={formData.storeLocation || ''} onChange={handleChange} required />
             <div className="flex justify-end gap-3 pt-4 border-t mt-4">
@@ -46,10 +45,20 @@ const SupervisorForm: FC<{
 };
 
 const PartnerManageSupervisorsView: FC = () => {
-    const [supervisors, setSupervisors] = useState<StoreSupervisor[]>(MOCK_SUPERVISORS);
+    const [supervisors, setSupervisors] = useState<StoreSupervisor[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSupervisor, setEditingSupervisor] = useState<StoreSupervisor | null>(null);
+
+    useEffect(() => {
+        setIsLoading(true);
+        const unsubscribe = onSupervisorsChange((data) => {
+            setSupervisors(data);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
 
     const summary = useMemo(() => ({
         total: supervisors.length,
@@ -73,19 +82,44 @@ const PartnerManageSupervisorsView: FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleSave = (data: StoreSupervisor) => {
-        if (editingSupervisor) { // Update
-            setSupervisors(supervisors.map(s => s.id === editingSupervisor.id ? { ...s, ...data } : s));
-        } else { // Add new
-            const newSupervisor = { ...data, id: `SUP${Date.now()}` };
-            setSupervisors([newSupervisor, ...supervisors]);
+    const handleSave = async (data: StoreSupervisor) => {
+        try {
+            if (editingSupervisor) { // Update
+                const updates: Partial<StoreSupervisor> = {
+                    name: data.name,
+                    phone: data.phone,
+                    storeLocation: data.storeLocation,
+                };
+                await updateSupervisor(editingSupervisor.id, updates);
+                alert('Supervisor updated successfully!');
+            } else { // Add new
+                const { name, email, phone, storeLocation } = data;
+                if (!name || !email || !phone || !storeLocation) {
+                    alert("All fields are required.");
+                    return;
+                }
+                await createSupervisor({ name, email, phone, storeLocation });
+                alert('Supervisor added successfully! Their login password is "password".');
+            }
+            setIsModalOpen(false);
+            setEditingSupervisor(null);
+        } catch (error) {
+            console.error("Failed to save supervisor:", error);
+            alert(`Error: ${error instanceof Error ? error.message : 'Could not save supervisor.'}`);
         }
-        setIsModalOpen(false);
-        setEditingSupervisor(null);
     };
     
-    const handleToggleStatus = (id: string) => {
-        setSupervisors(supervisors.map(s => s.id === id ? { ...s, status: s.status === 'Active' ? 'Inactive' : 'Active'} : s));
+    const handleToggleStatus = async (id: string) => {
+        const supervisor = supervisors.find(s => s.id === id);
+        if (!supervisor) return;
+
+        const newStatus = supervisor.status === 'Active' ? 'Inactive' : 'Active';
+        try {
+            await updateSupervisor(id, { status: newStatus });
+        } catch (error) {
+            console.error("Failed to toggle status:", error);
+            alert("Error: Could not update status.");
+        }
     };
 
     return (
@@ -116,7 +150,9 @@ const PartnerManageSupervisorsView: FC = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredSupervisors.map(sup => (
+                            {isLoading ? (
+                                <tr><td colSpan={4} className="text-center py-10 text-gray-500">Loading supervisors...</td></tr>
+                            ) : filteredSupervisors.length > 0 ? filteredSupervisors.map(sup => (
                                 <tr key={sup.id}>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-gray-900">{sup.name}</div>
@@ -135,7 +171,9 @@ const PartnerManageSupervisorsView: FC = () => {
                                         <Button variant="ghost" size="sm" onClick={() => openEditModal(sup)}>Edit</Button>
                                     </td>
                                 </tr>
-                            ))}
+                            )) : (
+                                <tr><td colSpan={4} className="text-center py-10 text-gray-500">No supervisors found. Add one to get started.</td></tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

@@ -23,6 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   userType,
   jobs,
   onAddJob,
+  onUpdateJob,
   onDeleteJob,
   currentLogoSrc,
   onLogoUpload,
@@ -41,7 +42,11 @@ const Dashboard: React.FC<DashboardProps> = ({
   branding,
   onUpdateBranding,
   currentUser,
+  currentUserProfile,
   onApplyNow,
+  isCvComplete,
+  onCvCompletion,
+  onProfileUpdate,
 }) => {
   const renderDashboardContent = () => {
     switch (userType) {
@@ -70,6 +75,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               teamPerformance={teamPerformance}
               jobs={jobs}
               onAddJob={onAddJob}
+              onUpdateJob={onUpdateJob}
               onDeleteJob={onDeleteJob}
               currentLogoSrc={currentLogoSrc} 
               onLogoUpload={onLogoUpload} 
@@ -79,6 +85,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               branding={branding}
               onUpdateBranding={onUpdateBranding}
               currentUser={currentUser}
+              // FIX: Pass currentUserProfile to AdminDashboardContent.
+              currentUserProfile={currentUserProfile}
             />
           </AdminLayout>
         );
@@ -89,11 +97,15 @@ const Dashboard: React.FC<DashboardProps> = ({
             onLogout={onLogout}
             activeCandidateMenuItem={activeCandidateMenuItem}
             onCandidateMenuItemClick={onCandidateMenuItemClick}
+            isCvComplete={isCvComplete!}
           >
             <CandidateDashboardContent
               activeCandidateMenuItem={activeCandidateMenuItem}
               jobs={jobs}
               onApplyNow={onApplyNow}
+              onCvCompletion={onCvCompletion}
+              onProfileUpdate={onProfileUpdate}
+              currentUserProfile={currentUserProfile}
             />
           </CandidateLayout>
         );

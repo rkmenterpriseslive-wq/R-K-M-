@@ -1,12 +1,10 @@
-import React, { useState, useMemo, FC } from 'react';
-import { PartnerSalaryUpdate } from '../../types';
+import React, { useState, useMemo, FC, useEffect } from 'react';
+import { PartnerSalaryUpdate, AppUser } from '../../types';
 import { calculateBreakdownFromRule } from '../../utils/salaryService';
 import Button from '../Button';
 import Input from '../Input';
 import Modal from '../Modal';
-
-// --- MOCK DATA ---
-const MOCK_UPDATES: PartnerSalaryUpdate[] = [];
+import { onSalaryUpdatesChange, updateSalaryUpdateStatus } from '../../services/firebaseService';
 
 // --- HELPER FUNCTIONS ---
 const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
@@ -72,19 +70,41 @@ const ConfirmationModal: FC<{
 
 
 // --- MAIN COMPONENT ---
-const PartnerSalaryUpdatesView: FC = () => {
-    const [updates, setUpdates] = useState<PartnerSalaryUpdate[]>(MOCK_UPDATES);
+interface PartnerSalaryUpdatesViewProps {
+    currentUser?: AppUser | null;
+}
+
+const PartnerSalaryUpdatesView: FC<PartnerSalaryUpdatesViewProps> = ({ currentUser }) => {
+    const [updates, setUpdates] = useState<PartnerSalaryUpdate[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [filters, setFilters] = useState({ search: '', status: '' });
     const [selectedUpdate, setSelectedUpdate] = useState<PartnerSalaryUpdate | null>(null);
+
+     useEffect(() => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        const unsubscribe = onSalaryUpdatesChange(currentUser.uid, (data) => {
+            setUpdates(data);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+
 
     const handleConfirmClick = (update: PartnerSalaryUpdate) => {
         setSelectedUpdate(update);
     };
 
-    const handleStatusChange = (id: string, newStatus: PartnerSalaryUpdate['status']) => {
-        setUpdates(prev => prev.map(up => up.id === id ? { ...up, status: newStatus } : up));
-        setSelectedUpdate(null);
-        alert(`Status for ${id} updated to ${newStatus}.`);
+    const handleStatusChange = async (id: string, newStatus: PartnerSalaryUpdate['status']) => {
+        if (!currentUser) return;
+        try {
+            await updateSalaryUpdateStatus(currentUser.uid, id, newStatus);
+            setSelectedUpdate(null);
+            alert(`Status for ${id} updated to ${newStatus}.`);
+        } catch (error) {
+            alert('Failed to update status.');
+            console.error(error);
+        }
     };
 
     const filteredUpdates = useMemo(() => {
@@ -143,7 +163,9 @@ const PartnerSalaryUpdatesView: FC = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredUpdates.map(up => (
+                             {isLoading ? (
+                                <tr><td colSpan={7} className="text-center py-10 text-gray-500">Loading salary updates...</td></tr>
+                            ) : filteredUpdates.length > 0 ? filteredUpdates.map(up => (
                                 <tr key={up.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 font-medium text-gray-900">{up.candidateName}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500"><div>{up.client}</div><div className="text-xs">{up.role}</div></td>
@@ -161,8 +183,7 @@ const PartnerSalaryUpdatesView: FC = () => {
                                         )}
                                     </td>
                                 </tr>
-                            ))}
-                             {filteredUpdates.length === 0 && (
+                            )) : (
                                 <tr>
                                     <td colSpan={7} className="text-center py-10 text-gray-500">No salary updates match the current filters.</td>
                                 </tr>

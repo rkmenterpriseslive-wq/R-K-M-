@@ -1,15 +1,9 @@
-import React, { useState, useRef, ChangeEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
 import Button from '../Button';
 import Input from '../Input';
 import Modal from '../Modal';
-import { FamilyMember } from '../../types';
-
-interface Document {
-  id: string;
-  name: string;
-  status: 'Not Uploaded' | 'Uploaded' | 'Verified';
-  fileName: string | null;
-}
+import { FamilyMember, UserProfile, Document } from '../../types';
+import { updateUserProfile } from '../../services/firebaseService';
 
 type OnboardingStatus = 'Pending Submission' | 'Pending Verification' | 'Onboarding Complete';
 
@@ -40,8 +34,12 @@ const OnboardingTracker: React.FC<{ status: OnboardingStatus }> = ({ status }) =
     );
 };
 
+interface MyDocumentsViewProps {
+    currentUserProfile?: UserProfile | null;
+    onProfileUpdate: (data: Partial<UserProfile>) => void;
+}
 
-const MyDocumentsView: React.FC = () => {
+const MyDocumentsView: React.FC<MyDocumentsViewProps> = ({ currentUserProfile, onProfileUpdate }) => {
   const [documents, setDocuments] = useState<Document[]>([
     { id: 'resume', name: 'Resume / CV', status: 'Not Uploaded', fileName: null },
     { id: 'photo', name: 'Passport-size photo', status: 'Not Uploaded', fileName: null },
@@ -78,12 +76,29 @@ const MyDocumentsView: React.FC = () => {
     familyPhoto: useRef<HTMLInputElement>(null),
   };
   
+  useEffect(() => {
+    if (currentUserProfile) {
+        setMaritalStatus(currentUserProfile.maritalStatus || '');
+        setMobileNumber(currentUserProfile.phone || '');
+        setUan(currentUserProfile.uan || '');
+        setEsi(currentUserProfile.esi || '');
+        setFamilyMembers(currentUserProfile.familyMembers || []);
+        setOnboardingStatus(currentUserProfile.onboardingStatus || 'Pending Submission');
+        setEsiCardFileName(currentUserProfile.esiCardFileName || null);
+        if (currentUserProfile.documents) {
+            setDocuments(currentUserProfile.documents);
+        }
+    }
+  }, [currentUserProfile]);
+
   const isSubmitted = onboardingStatus !== 'Pending Submission';
 
   const handleFileChange = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setDocuments(docs => docs.map(doc => doc.id === id ? { ...doc, status: 'Uploaded', fileName: file.name } : doc));
+      const updatedDocuments = documents.map(doc => doc.id === id ? { ...doc, status: 'Uploaded', fileName: file.name } : doc);
+      setDocuments(updatedDocuments);
+      onProfileUpdate({ documents: updatedDocuments });
     }
   };
 
@@ -120,17 +135,22 @@ const MyDocumentsView: React.FC = () => {
         photoFileName: memberPhotoFile ? memberPhotoFile.name : memberFormData.photoFileName,
     };
 
+    let updatedFamilyMembers: FamilyMember[];
     if (editingMember) {
-        setFamilyMembers(members => members.map(m => m.id === editingMember.id ? { ...editingMember, ...updatedData } : m));
+        updatedFamilyMembers = familyMembers.map(m => m.id === editingMember.id ? { ...editingMember, ...updatedData } : m);
     } else {
         const newMember: FamilyMember = { id: Date.now().toString(), ...updatedData };
-        setFamilyMembers(members => [...members, newMember]);
+        updatedFamilyMembers = [...familyMembers, newMember];
     }
+    onProfileUpdate({ familyMembers: updatedFamilyMembers });
     handleCloseModal();
   };
   
   const handleDeleteMember = (id: string) => {
-      setFamilyMembers(members => members.filter(m => m.id !== id));
+      if (window.confirm('Are you sure you want to delete this family member?')) {
+        const updatedFamilyMembers = familyMembers.filter(m => m.id !== id);
+        onProfileUpdate({ familyMembers: updatedFamilyMembers });
+      }
   };
 
   const handleMemberFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,15 +166,30 @@ const MyDocumentsView: React.FC = () => {
   };
 
   const handleSubmitForVerification = () => {
-    // In a real app, this would save all data and submit to the backend.
-    setOnboardingStatus('Pending Verification');
+    const allUploaded = documents.every(d => d.status === 'Uploaded' || d.status === 'Verified');
+    if (!allUploaded) {
+        alert('Please upload all required documents before submitting for verification.');
+        return;
+    }
+
+    onProfileUpdate({
+        maritalStatus,
+        phone: mobileNumber,
+        uan,
+        esi,
+        onboardingStatus: 'Pending Verification',
+        documents,
+        familyMembers,
+    });
     alert('Documents submitted for verification!');
   };
 
   // This is a temporary function for demonstration purposes to simulate HR approval.
   const handleSimulateHrApproval = () => {
-    setOnboardingStatus('Onboarding Complete');
-    setEsiCardFileName('ESI_Card_John_Doe.pdf');
+    onProfileUpdate({
+        onboardingStatus: 'Onboarding Complete',
+        esiCardFileName: `ESI_Card_${currentUserProfile?.name?.replace(' ', '_') || 'Employee'}.pdf`
+    });
   };
 
   return (

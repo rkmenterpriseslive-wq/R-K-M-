@@ -1,13 +1,11 @@
-import React, { useState, useMemo, FC, useRef } from 'react';
-import { PartnerInvoice } from '../../types';
+import React, { useState, useMemo, FC, useRef, useEffect } from 'react';
+import { PartnerInvoice, AppUser } from '../../types';
 import Button from '../Button';
 import Input from '../Input';
 import Modal from '../Modal';
+import { onPartnerInvoicesChange } from '../../services/firebaseService';
 
 declare const html2pdf: any;
-
-// --- MOCK DATA ---
-const MOCK_INVOICES: PartnerInvoice[] = [];
 
 // --- HELPER FUNCTIONS ---
 const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
@@ -111,10 +109,26 @@ const InvoiceModal: FC<{ invoice: PartnerInvoice, onClose: () => void }> = ({ in
 
 
 // --- MAIN COMPONENT ---
-const PartnerInvoicesView: FC = () => {
-    const [invoices, setInvoices] = useState<PartnerInvoice[]>(MOCK_INVOICES);
+interface PartnerInvoicesViewProps {
+    currentUser?: AppUser | null;
+}
+
+const PartnerInvoicesView: FC<PartnerInvoicesViewProps> = ({ currentUser }) => {
+    const [invoices, setInvoices] = useState<PartnerInvoice[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [filters, setFilters] = useState({ search: '', month: '', status: '' });
     const [selectedInvoice, setSelectedInvoice] = useState<PartnerInvoice | null>(null);
+
+    useEffect(() => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        const unsubscribe = onPartnerInvoicesChange(currentUser.uid, (data) => {
+            setInvoices(data);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+
 
     const filteredInvoices = useMemo(() => {
         return invoices.filter(inv => 
@@ -175,7 +189,9 @@ const PartnerInvoicesView: FC = () => {
                             </tr>
                         </thead>
                          <tbody className="bg-white divide-y divide-gray-200">
-                             {filteredInvoices.map(inv => (
+                             {isLoading ? (
+                                <tr><td colSpan={7} className="text-center py-10 text-gray-500">Loading invoices...</td></tr>
+                             ) : filteredInvoices.length > 0 ? filteredInvoices.map(inv => (
                                 <tr key={inv.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">{inv.id}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{inv.clientName}</td>
@@ -189,8 +205,7 @@ const PartnerInvoicesView: FC = () => {
                                         <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(inv)}>View</Button>
                                     </td>
                                 </tr>
-                             ))}
-                              {filteredInvoices.length === 0 && (
+                             )) : (
                                 <tr>
                                     <td colSpan={7} className="text-center py-10 text-gray-500">No invoices found.</td>
                                 </tr>
