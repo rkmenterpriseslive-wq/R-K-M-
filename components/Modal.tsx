@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -45,11 +44,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, description, chil
     >
       <div
         ref={modalRef}
-        className={`bg-white rounded-lg shadow-xl w-full mx-auto ${maxWidth}`}
+        className={`bg-white rounded-lg shadow-xl w-full mx-auto ${maxWidth} flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()} // Prevent clicking on modal content from closing it
       >
         {/* Modal Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+        <div className="flex-shrink-0 flex justify-between items-center p-6 border-b border-gray-200">
           <h2 id="modal-title" className="text-2xl font-bold text-gray-800">
             {title}
           </h2>
@@ -65,7 +64,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, description, chil
         </div>
 
         {/* Modal Body */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto">
           {description && <p className="text-gray-600 mb-6">{description}</p>}
           {children}
         </div>

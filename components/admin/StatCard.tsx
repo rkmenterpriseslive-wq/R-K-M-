@@ -15,14 +15,14 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, metrics, isSpli
     // Special layout for metric-only cards (like the new Pipeline card)
     if (!hasMainValue && metrics) {
         return (
-            <div className="bg-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[10rem] h-full border border-gray-200">
+            <div className="bg-white rounded-xl shadow-md p-6 flex flex-col min-h-[10rem] h-full border border-gray-200">
                 <div>
-                    <h3 className="text-sm font-semibold text-gray-500 mb-2">{title}</h3>
+                    <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
                 </div>
-                <div className="flex w-full justify-around items-center mt-auto">
+                <div className="flex w-full justify-around items-center flex-grow">
                     {metrics.map((m, i) => (
                         <div key={i} className="flex flex-col items-center text-center">
-                            <span className="text-sm text-gray-500 font-medium">{m.label}</span>
+                            <span className="text-sm text-gray-600 font-medium">{m.label}</span>
                             <p className={`text-4xl font-bold ${m.color || 'text-gray-900'} mt-1`}>{m.value}</p>
                         </div>
                     ))}

@@ -768,6 +768,35 @@ export const onPartnerRequirementsChange = (partnerUid: string, callback: (requi
     });
 };
 
+// FIX: Export onAllPartnerRequirementsChange to get requirements across all partners.
+export const onAllPartnerRequirementsChange = (callback: (requirements: (PartnerRequirement & { partnerUid: string })[]) => void): Unsubscribe => {
+    const requirementsRef = ref(database, `partner_requirements`);
+    return onValue(requirementsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const dataByPartner = snapshot.val();
+            const allRequirements: (PartnerRequirement & { partnerUid: string })[] = [];
+            Object.keys(dataByPartner).forEach(partnerUid => {
+                const partnerReqs = dataByPartner[partnerUid];
+                if (partnerReqs) {
+                    Object.keys(partnerReqs).forEach(reqId => {
+                        allRequirements.push({
+                            id: reqId,
+                            ...partnerReqs[reqId],
+                            partnerUid: partnerUid
+                        });
+                    });
+                }
+            });
+            allRequirements.sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime());
+            callback(allRequirements);
+        } else {
+            callback([]);
+        }
+    }, (error) => {
+        console.error("Firebase: Error listening for all partner requirement changes:", error);
+    });
+};
+
 export const addPartnerRequirement = async (partnerUid: string, requirementData: { role: string; client: string; location: string; count: number; }): Promise<void> => {
     try {
         const requirementsRef = ref(database, `partner_requirements/${partnerUid}`);
@@ -971,6 +1000,23 @@ export const getVendors = async (): Promise<any[]> => {
   }
 };
 
+// FIX: Export getUsers function to fetch all user profiles.
+export const getUsers = async (): Promise<UserProfile[]> => {
+    try {
+        const usersRef = ref(database, 'users');
+        const snapshot = await get(usersRef);
+        if (snapshot.exists()) {
+            const usersData = snapshot.val();
+            return Object.values(usersData) as UserProfile[];
+        }
+        return [];
+    } catch (error) {
+        console.error("Firebase: Error fetching users:", error);
+        return [];
+    }
+};
+
+
 // --- SUPERVISOR MANAGEMENT ---
 
 export const createSupervisor = async (supervisorData: Omit<StoreSupervisor, 'id' | 'status'>): Promise<StoreSupervisor> => {
@@ -1060,16 +1106,17 @@ export const getPanelConfig = async (): Promise<PanelConfig | null> => {
     }
   } catch (error) {
     console.error("Firebase: Error fetching panel config:", error);
-    throw error;
+    return null;
   }
 };
 
+// FIX: Add and export updatePanelConfig function
 export const updatePanelConfig = async (config: PanelConfig): Promise<void> => {
-  try {
-    const panelConfigRef = ref(database, 'panel_config');
-    await set(panelConfigRef, config);
-  } catch (error) {
-    console.error("Firebase: Error updating panel config:", error);
-    throw error;
-  }
+    try {
+        const panelConfigRef = ref(database, 'panel_config');
+        await set(panelConfigRef, config);
+    } catch (error) {
+        console.error("Firebase: Error updating panel config:", error);
+        throw error;
+    }
 };

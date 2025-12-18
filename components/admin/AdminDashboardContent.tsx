@@ -1,4 +1,3 @@
-
 // FIX: Import firebase/database functions used directly in this component.
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getDatabase, ref, onValue } from 'firebase/database';
@@ -23,6 +22,7 @@ import {
   UserProfile,
   CommissionAttendanceRecord,
   DemoRequest,
+  PartnerRequirement,
 } from '../../types';
 import JobPostingForm from '../JobPostingForm';
 import LogoUploader from '../LogoUploader';
@@ -51,121 +51,15 @@ import StoreEmployeesView from '../supervisor/StoreEmployeesView';
 import HRDashboardView from '../hr/HRDashboardView';
 import { getHRDashboardStats } from '../../utils/hrService';
 import PartnerDashboardView from '../partner/PartnerDashboardView';
-import { getRevenueData, RevenueData, getPanelConfig, updatePanelConfig, createVendor, getVendors, onDailyLineupsChange, addDailyLineup, updateDailyLineup, onCandidatesChange, updateCandidateStatus, addCandidateToSelection, updateCandidate, onAttendanceForMonthChange, saveEmployeeAttendance, onComplaintsChange, addComplaint, updateComplaint, onWarningLettersChange, addWarningLetter, updateWarningLetter, onDemoRequestsChange, getDailyLineups, getCandidates, getComplaints, getWarningLetters, getAttendanceForMonth } from '../../services/firebaseService';
+import { getRevenueData, RevenueData, getPanelConfig, updatePanelConfig, createVendor, getVendors, onDailyLineupsChange, addDailyLineup, updateDailyLineup, onCandidatesChange, updateCandidateStatus, addCandidateToSelection, updateCandidate, onAttendanceForMonthChange, saveEmployeeAttendance, onComplaintsChange, addComplaint, updateComplaint, onWarningLettersChange, addWarningLetter, updateWarningLetter, onDemoRequestsChange, getDailyLineups, getCandidates, getComplaints, getWarningLetters, getAttendanceForMonth, onAllPartnerRequirementsChange, getUsers } from '../../services/firebaseService';
 import HelpCenterView from '../candidate/HelpCenterView';
 import HRUpdatesCard from './HRUpdatesCard';
+import SettingsView from './SettingsView';
 
 declare const html2pdf: any;
 
 // --- SETTINGS TABS TYPE ---
 type SettingsTab = 'Team & Roles' | 'Permissions' | 'Role' | 'Panel Options' | 'My Account' | 'Branding';
-
-
-const TeamWiseTable = () => {
-    const [activeTab, setActiveTab] = useState('Team Wise');
-    const tabs = ['Team Wise', 'Partner Wise', 'Store Wise', 'Role Wise'];
-    
-    // Mock data based on the provided image
-    const teamData = [
-        {
-            team: 'Vikrant Singh',
-            location: 'Ghaziabad-24',
-            role: 'Picker & Packer-24',
-            store: 'Govindpuram-4, Siddhartha Vihar-20',
-            partner: 'Organic Circle-24',
-            brand: 'Zepto',
-            totalOpenings: 24,
-            pending: 0,
-            approved: 24,
-        },
-        {
-            team: 'Rohit Kumar',
-            location: 'Noida-8, Delhi-20',
-            role: 'Picker & Packer-28',
-            store: 'Sec-116-8, Mayur Vihar 1-20',
-            partner: 'Organic Circle-8, Venus Food-20',
-            brand: 'Amazon',
-            totalOpenings: 28,
-            pending: 0,
-            approved: 28,
-        },
-        {
-            team: 'Surekha Choudhry',
-            location: 'Ghaziabad-8',
-            role: 'Picker & Packer-8',
-            store: 'Rajendra Nagar-8',
-            partner: 'Organic Circle-8',
-            brand: 'Amazon',
-            totalOpenings: 8,
-            pending: 0,
-            approved: 8,
-        },
-    ];
-    
-    // In a real application, you would have different data sets for each tab
-    const currentData = teamData; // For now, we only have data for 'Team Wise'
-
-    return (
-        <div className="bg-white rounded-xl shadow-md border border-gray-200">
-            <div className="p-4 border-b">
-                <div className="flex space-x-2">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                                activeTab === tab 
-                                ? 'bg-yellow-400 text-black' 
-                                : 'bg-blue-500 text-white hover:bg-blue-600'
-                            }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">{activeTab}</h3>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                {['TEAM', 'LOCATION', 'ROLE', 'STORE', 'PARTNER', 'BRAND', 'TOTAL OPENINGS', 'PENDING', 'APPROVED'].map(header => (
-                                    <th key={header} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider border-b">
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentData.length > 0 ? (
-                                currentData.map((row, index) => (
-                                    <tr key={index} className="border-b last:border-b-0">
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-800">{row.team}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.location}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.role}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.store}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.partner}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.brand}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-semibold">{row.totalOpenings}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-semibold">{row.pending}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-semibold">{row.approved}</td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={9} className="text-center py-10 text-gray-400">
-                                        No data available for {activeTab}
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 
 // New HR Summary Card component
@@ -2050,7 +1944,7 @@ const WarningLettersView: React.FC<{ userType: UserType, currentUserProfile?: Us
         html2pdf().from(element).set(opt).save().then(() => setIsDownloading(false));
     };
 
-    const IssueLetterForm: React.FC<{ onSave: (data: any) => void, onCancel: () => void }> = ({ onSave, onCancel }) => {
+    const IssueLetterForm: React.FC<{ onSave: (data: any) => void; onCancel: () => void }> = ({ onSave, onCancel }) => {
         const [formData, setFormData] = useState({ employeeName: '', reason: 'Absenteeism', description: '' });
         
         const selectableCandidates = useMemo(() => {
@@ -2241,8 +2135,22 @@ const DailyReportTemplate = ({ onBack, userType, currentUser }: { onBack: () => 
   );
 };
 
+// FIX: Define UnifiedRequirement interface to resolve typing errors.
+interface UnifiedRequirement {
+    id: string;
+    client: string;
+    partner: string;
+    role: string;
+    total: number;
+    pending: number;
+    approved: number;
+    location: string;
+    store: string;
+    team: string;
+}
+
 const BreakdownTable: React.FC<{ title: string; data: { name: string; total: number; pending: number; approved: number }[] }> = ({ title, data }) => (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
         <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">{title}</h3>
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -2269,16 +2177,64 @@ const BreakdownTable: React.FC<{ title: string; data: { name: string; total: num
     </div>
 );
 
-const PartnerRequirementsDetailView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    // Expanded mock data for demonstration. In a real app, this would be fetched.
-    const requirements = [
-        { id: 'R001', client: 'Flipkart', role: 'Picker', total: 50, pending: 20, approved: 30, location: 'Delhi', store: 'Okhla Warehouse', team: 'Team A' },
-        { id: 'R002', client: 'Blinkit', role: 'Delivery Associate', total: 100, pending: 80, approved: 20, location: 'Gurgaon', store: 'Sector 55 Hub', team: 'Team B' },
-        { id: 'R003', client: 'Zomato', role: 'Delivery Associate', total: 75, pending: 15, approved: 60, location: 'Gurgaon', store: 'Cyber Hub Kitchen', team: 'Team B' },
-        { id: 'R004', client: 'Myntra', role: 'Packer', total: 40, pending: 40, approved: 0, location: 'Delhi', store: 'Manesar Logistics', team: 'Team A' },
-        { id: 'R005', client: 'Blinkit', role: 'Picker', total: 60, pending: 10, approved: 50, location: 'Noida', store: 'Sector 18 Hub', team: 'Team C' },
-        { id: 'R006', client: 'Flipkart', role: 'Packer', total: 30, pending: 5, approved: 25, location: 'Delhi', store: 'Okhla Warehouse', team: 'Team A' },
-    ];
+
+const PartnerRequirementsDetailView: React.FC<{ 
+    onBack: () => void;
+    jobs: Job[];
+    allPartnerRequirements: (PartnerRequirement & { partnerUid: string })[];
+    users: UserProfile[];
+}> = ({ onBack, jobs, allPartnerRequirements, users }) => {
+    
+    const requirements = useMemo(() => {
+        const userMap = new Map(users.map(u => [u.uid, u.partnerName || u.name]));
+
+        // Static team assignment based on the partner providing the candidates.
+        const teamMap: Record<string, string> = {
+            'Organic Circle': 'Vikrant Singh',
+            'Venus Food': 'Rohit Kumar',
+        };
+
+        // Process vendor jobs from the main job board
+        const vendorJobs: UnifiedRequirement[] = jobs
+            .filter(job => job.jobCategory !== 'Direct')
+            .map(job => {
+                const partnerName = job.company;
+                return {
+                    id: `job-${job.id}`,
+                    client: job.jobCategory, // Brand name
+                    partner: partnerName,
+                    role: job.title,
+                    total: job.numberOfOpenings,
+                    // For jobs posted on the board, we assume they are approved and have 0 pending.
+                    pending: 0, 
+                    approved: job.numberOfOpenings,
+                    location: job.jobCity,
+                    store: job.storeName || job.locality,
+                    team: teamMap[partnerName] || 'Unassigned',
+                };
+            });
+
+        // Process requirements submitted by partners
+        const partnerReqs: UnifiedRequirement[] = allPartnerRequirements.map(req => {
+            const partnerName = userMap.get(req.partnerUid) || 'Unknown Partner';
+            const isApproved = req.submissionStatus === 'Approved';
+            return {
+                id: `req-${req.id}`,
+                client: req.client, // Brand name
+                partner: partnerName,
+                role: req.title,
+                total: req.openings,
+                pending: isApproved ? 0 : req.openings,
+                approved: isApproved ? req.openings : 0,
+                location: req.location,
+                store: req.location, // No specific store data in partner req, so using location as a fallback
+                team: teamMap[partnerName] || 'Unassigned',
+            };
+        });
+
+        return [...vendorJobs, ...partnerReqs];
+    }, [jobs, allPartnerRequirements, users]);
+
 
     const totalStats = requirements.reduce((acc, curr) => {
         acc.total += curr.total;
@@ -2288,18 +2244,19 @@ const PartnerRequirementsDetailView: React.FC<{ onBack: () => void }> = ({ onBac
     }, { total: 0, pending: 0, approved: 0 });
     
     // Create breakdowns
-    type RequirementKey = keyof typeof requirements[0];
-    const createBreakdown = (data: typeof requirements, key: RequirementKey) => {
-        const breakdown = data.reduce((acc, item) => {
-            const group = item[key] as string;
-            if (!acc[group]) {
-                acc[group] = { total: 0, pending: 0, approved: 0 };
+    // FIX: Replaced the 'reduce' implementation with a more explicit for...of loop.
+    // This avoids a potential complex type inference issue with 'reduce' that could lead to the "unknown index type" error.
+    const createBreakdown = (data: UnifiedRequirement[], key: keyof UnifiedRequirement) => {
+        const breakdown: Record<string, { total: number, pending: number, approved: number }> = {};
+        for (const item of data) {
+            const group = String(item[key] || 'N/A');
+            if (!breakdown[group]) {
+                breakdown[group] = { total: 0, pending: 0, approved: 0 };
             }
-            acc[group].total += item.total;
-            acc[group].pending += item.pending;
-            acc[group].approved += item.approved;
-            return acc;
-        }, {} as Record<string, { total: number, pending: number, approved: number }>);
+            breakdown[group].total += item.total;
+            breakdown[group].pending += item.pending;
+            breakdown[group].approved += item.approved;
+        }
         return Object.entries(breakdown).map(([name, stats]) => ({ name, ...stats }));
     };
 
@@ -2307,22 +2264,23 @@ const PartnerRequirementsDetailView: React.FC<{ onBack: () => void }> = ({ onBac
     const locationWise = createBreakdown(requirements, 'location');
     const teamWise = createBreakdown(requirements, 'team');
     const roleWise = createBreakdown(requirements, 'role');
+    const partnerWise = createBreakdown(requirements, 'partner');
 
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-bold text-gray-800">Partner Requirements Breakdown</h2>
+                <h2 className="text-3xl font-bold text-gray-800">Requirements Breakdown</h2>
                 <Button variant="secondary" onClick={onBack}>Back to Dashboard</Button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h4 className="text-sm font-semibold text-gray-500">Total Requirements</h4>
+                    <h4 className="text-sm font-semibold text-gray-500">Total Openings</h4>
                     <p className="text-3xl font-bold text-blue-600">{totalStats.total}</p>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h4 className="text-sm font-semibold text-gray-500">Pending Approval</h4>
+                    <h4 className="text-sm font-semibold text-gray-500">Pending</h4>
                     <p className="text-3xl font-bold text-yellow-600">{totalStats.pending}</p>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -2332,12 +2290,12 @@ const PartnerRequirementsDetailView: React.FC<{ onBack: () => void }> = ({ onBac
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                 <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Breakdown by Client & Role</h3>
+                 <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Detailed Breakdown by Client & Role</h3>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client (Brand)</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Openings</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pending</th>
@@ -2360,9 +2318,10 @@ const PartnerRequirementsDetailView: React.FC<{ onBack: () => void }> = ({ onBac
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <BreakdownTable title="Team Wise" data={teamWise} />
+                <BreakdownTable title="Partner Wise" data={partnerWise} />
                 <BreakdownTable title="Store Wise" data={storeWise} />
                 <BreakdownTable title="Location Wise" data={locationWise} />
-                <BreakdownTable title="Team Wise" data={teamWise} />
                 <BreakdownTable title="Role Wise" data={roleWise} />
             </div>
         </div>
@@ -2406,7 +2365,7 @@ const ReportsView: React.FC<{ userType: UserType, currentUser?: AppUser | null }
     document.body.removeChild(link);
   };
 
-  const convertToCSV = (data: any[], headers: (keyof any)[]) => {
+  const convertToCSV = (data: any[], headers: string[]) => {
     const headerRow = headers.join(',');
     const rows = data.map(row => {
         return headers.map(header => {
@@ -2555,274 +2514,440 @@ const ReportsView: React.FC<{ userType: UserType, currentUser?: AppUser | null }
   );
 };
 
-const AddVendorForm: React.FC<{
-    onSave: (data: any) => void;
-    onClose: () => void;
-    isSubmitting: boolean;
-    initialData: any | null;
-    panelConfig: PanelConfig | null;
-}> = ({ onSave, onClose, isSubmitting, initialData, panelConfig }) => {
-    const [formData, setFormData] = useState({
-        brandName: '',
-        partnerName: '',
-        fullAddress: '',
-        email: '',
-        phone: '',
-        locations: [] as string[],
-        roles: [] as string[],
-        commissionType: 'percentage',
-        commissionValue: '',
-        terms: '',
-    });
+// New Component for the tabbed Requirements Breakdown view
+type BreakdownTab = 'Team Wise' | 'Partner Wise' | 'Store Wise' | 'Role Wise';
 
-    useEffect(() => {
-        if (initialData) {
-            setFormData({
-                brandName: initialData.brandName || '',
-                partnerName: initialData.partnerName || '',
-                fullAddress: initialData.fullAddress || '',
-                email: initialData.email || '',
-                phone: initialData.phone || '',
-                locations: initialData.locations || [],
-                roles: initialData.roles || [],
-                commissionType: initialData.commissionType || 'percentage',
-                commissionValue: initialData.commissionValue || '',
-                terms: initialData.terms || '',
+const RequirementsBreakdownView: React.FC<{
+    jobs: Job[];
+    allPartnerRequirements: (PartnerRequirement & { partnerUid: string })[];
+    users: UserProfile[];
+}> = ({ jobs, allPartnerRequirements, users }) => {
+    const [activeTab, setActiveTab] = useState<BreakdownTab>('Partner Wise');
+    
+    const requirements = useMemo(() => {
+        const userMap = new Map(users.map(u => [u.uid, u.partnerName || u.name]));
+        const teamMap: Record<string, string> = { 'Organic Circle': 'Vikrant Singh', 'Venus Food': 'Rohit Kumar' };
+        const vendorJobs: UnifiedRequirement[] = jobs
+            .filter(job => job.jobCategory !== 'Direct')
+            .map(job => {
+                const partnerName = job.company;
+                return {
+                    id: `job-${job.id}`, client: job.jobCategory, partner: partnerName, role: job.title,
+                    total: job.numberOfOpenings, pending: 0, approved: job.numberOfOpenings,
+                    location: job.jobCity, store: job.storeName || job.locality, team: teamMap[partnerName] || 'Unassigned',
+                };
             });
-        }
-    }, [initialData]);
+        const partnerReqs: UnifiedRequirement[] = allPartnerRequirements.map(req => {
+            const partnerName = userMap.get(req.partnerUid) || 'Unknown Partner';
+            const isApproved = req.submissionStatus === 'Approved';
+            return {
+                id: `req-${req.id}`, client: req.client, partner: partnerName, role: req.title,
+                total: req.openings, pending: isApproved ? 0 : req.openings, approved: isApproved ? req.openings : 0,
+                location: req.location, store: req.location, team: teamMap[partnerName] || 'Unassigned',
+            };
+        });
+        return [...vendorJobs, ...partnerReqs];
+    }, [jobs, allPartnerRequirements, users]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleMultiSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const { name, options } = e.target;
-        const value: string[] = [];
-        for (let i = 0, l = options.length; i < l; i++) {
-            if (options[i].selected) {
-                value.push(options[i].value);
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'Partner Wise':
+                return (
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
+                        <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Partner Wise</h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        {['BRAND', 'PARTNER', 'LOCATION', 'ROLE', 'STORE', 'TOTAL OPENINGS', 'PENDING', 'APPROVED'].map(h => (
+                                            <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {requirements.map(req => (
+                                        <tr key={req.id}>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{req.client}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.partner}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.location}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.role}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.store}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-800 text-center">{req.total}</td>
+                                            <td className="px-6 py-4 text-sm text-yellow-700 text-center">{req.pending}</td>
+                                            <td className="px-6 py-4 text-sm text-green-700 text-center">{req.approved}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            case 'Team Wise': {
+                 const sortedByTeam = [...requirements].sort((a, b) => a.team.localeCompare(b.team));
+                 return (
+                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
+                        <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Team Wise</h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        {['TEAM', 'BRAND', 'PARTNER', 'LOCATION', 'ROLE', 'STORE', 'TOTAL OPENINGS', 'PENDING', 'APPROVED'].map(h => (
+                                            <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {sortedByTeam.map(req => (
+                                        <tr key={req.id}>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{req.team}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.client}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.partner}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.location}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.role}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.store}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-800 text-center">{req.total}</td>
+                                            <td className="px-6 py-4 text-sm text-yellow-700 text-center">{req.pending}</td>
+                                            <td className="px-6 py-4 text-sm text-green-700 text-center">{req.approved}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )};
+            case 'Store Wise': {
+                const sortedByStore = [...requirements].sort((a, b) => a.store.localeCompare(b.store));
+                return (
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
+                        <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Store Wise</h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        {['STORE', 'BRAND', 'PARTNER', 'LOCATION', 'ROLE', 'TOTAL OPENINGS', 'PENDING', 'APPROVED'].map(h => (
+                                            <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {sortedByStore.map(req => (
+                                        <tr key={req.id}>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{req.store}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.client}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.partner}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.location}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.role}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-800 text-center">{req.total}</td>
+                                            <td className="px-6 py-4 text-sm text-yellow-700 text-center">{req.pending}</td>
+                                            <td className="px-6 py-4 text-sm text-green-700 text-center">{req.approved}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
             }
+            case 'Role Wise': {
+                const sortedByRole = [...requirements].sort((a, b) => a.role.localeCompare(b.role));
+                return (
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
+                        <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Role Wise</h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        {['ROLE', 'BRAND', 'PARTNER', 'LOCATION', 'STORE', 'TOTAL OPENINGS', 'PENDING', 'APPROVED'].map(h => (
+                                            <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {sortedByRole.map(req => (
+                                        <tr key={req.id}>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{req.role}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.client}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.partner}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.location}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{req.store}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-800 text-center">{req.total}</td>
+                                            <td className="px-6 py-4 text-sm text-yellow-700 text-center">{req.pending}</td>
+                                            <td className="px-6 py-4 text-sm text-green-700 text-center">{req.approved}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            }
+            default: return null;
         }
-        setFormData(prev => ({ ...prev, [name]: value }));
     };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave(formData);
-    };
-
-    const selectStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white";
+    
+    const tabs: BreakdownTab[] = ['Team Wise', 'Partner Wise', 'Store Wise', 'Role Wise'];
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                <Input id="brandName" name="brandName" label="Brand Name" placeholder="e.g., Blinkit" value={formData.brandName} onChange={handleChange} required wrapperClassName="mb-0"/>
-                <Input id="partnerName" name="partnerName" label="Partner Name" placeholder="e.g., John Doe" value={formData.partnerName} onChange={handleChange} required wrapperClassName="mb-0"/>
-                <div className="md:col-span-2">
-                    <Input id="fullAddress" name="fullAddress" label="Full Address" placeholder="Enter full address" value={formData.fullAddress} onChange={handleChange} required wrapperClassName="mb-0"/>
-                </div>
-                <Input id="email" name="email" label="Email Address" type="email" placeholder="contact@vendor.com" value={formData.email} onChange={handleChange} disabled={!!initialData} required wrapperClassName="mb-0"/>
-                <Input id="phone" name="phone" label="Phone Number" type="tel" placeholder="+91 98765 43210" value={formData.phone} onChange={handleChange} required wrapperClassName="mb-0"/>
-
-                <div>
-                    <label htmlFor="locations" className="block text-sm font-medium text-gray-700 mb-1">Operational Locations</label>
-                    <select id="locations" name="locations" multiple value={formData.locations} onChange={handleMultiSelectChange} className={`${selectStyles} h-28`}>
-                        {(panelConfig?.locations || []).map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd on Mac) to select multiple.</p>
-                </div>
-                <div>
-                    <label htmlFor="roles" className="block text-sm font-medium text-gray-700 mb-1">Job Roles</label>
-                    <select id="roles" name="roles" multiple value={formData.roles} onChange={handleMultiSelectChange} className={`${selectStyles} h-28`}>
-                        {(panelConfig?.jobRoles || []).map(role => <option key={role} value={role}>{role}</option>)}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd on Mac) to select multiple.</p>
-                </div>
-                
-                <div className="md:col-span-2">
-                    <fieldset className="border rounded-md p-4">
-                        <legend className="text-sm font-medium text-gray-700 px-1">Commission Structure</legend>
-                        <div className="space-y-3">
-                            <div className="flex items-center space-x-6">
-                                <label className="text-sm font-medium text-gray-700">Structure Type</label>
-                                <div className="flex items-center gap-4">
-                                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="commissionType" value="percentage" checked={formData.commissionType === 'percentage'} onChange={handleChange} className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"/> Percentage Based</label>
-                                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="commissionType" value="slab" checked={formData.commissionType === 'slab'} onChange={handleChange} className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"/> Slab Based</label>
-                                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="commissionType" value="attendance" checked={formData.commissionType === 'attendance'} onChange={handleChange} className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"/> Attendance Based</label>
-                                </div>
-                            </div>
-                            {formData.commissionType === 'percentage' && (
-                                <Input id="commissionValue" name="commissionValue" label="Percentage (%)" type="number" placeholder="e.g., 10" value={formData.commissionValue} onChange={handleChange} wrapperClassName="mb-0"/>
-                            )}
-                        </div>
-                    </fieldset>
-                </div>
-
-                <div className="md:col-span-2">
-                    <label htmlFor="terms" className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
-                    <textarea id="terms" name="terms" rows={3} value={formData.terms} onChange={handleChange} className={selectStyles} placeholder="Enter any terms and conditions for this vendor..."></textarea>
-                </div>
+        <div>
+            <div className="flex items-center gap-2">
+                {tabs.map(tab => (
+                    <button 
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                            activeTab === tab 
+                                ? 'bg-yellow-400 text-black shadow-sm' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                    >
+                        {tab}
+                    </button>
+                ))}
             </div>
-            <div className="flex justify-end gap-3 pt-6 border-t mt-6">
-                <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button type="submit" variant="primary" loading={isSubmitting}>{initialData ? 'Update Vendor' : 'Add Vendor'}</Button>
-            </div>
-        </form>
+            {renderTabContent()}
+        </div>
     );
 };
 
+
+// FIX: Add missing VendorDirectoryView component
 const VendorDirectoryView: React.FC<{
     vendors: any[];
     setVendors: React.Dispatch<React.SetStateAction<any[]>>;
     isLoading: boolean;
     panelConfig: PanelConfig | null;
 }> = ({ vendors, setVendors, isLoading, panelConfig }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingVendor, setEditingVendor] = useState<any | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const handleOpenModal = (vendor: any | null) => {
-    setEditingVendor(vendor);
-    setIsModalOpen(true);
-  };
-  
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingVendor(null);
-  };
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
-  const handleSaveVendor = async (vendorData: any) => {
-    setIsSubmitting(true);
-    try {
-      if (editingVendor) { // Update
-        // await updateVendor(editingVendor.id, vendorData);
-        // setVendors(prev => prev.map(v => v.id === editingVendor.id ? { ...v, ...vendorData } : v));
-        alert('Vendor update functionality is not yet implemented.');
-      } else { // Create
-        const newVendor = await createVendor(vendorData);
-        const finalNewVendor = {
-            ...newVendor,
-            domain: `${newVendor.brandName.toLowerCase().replace(/\s+/g, '')}.com`
+    const handleAddVendor = async (vendorData: any) => {
+        setIsSubmitting(true);
+        try {
+            const newVendor = await createVendor(vendorData);
+            setVendors(prev => [...prev, newVendor]);
+            setIsVendorModalOpen(false);
+        } catch (error) {
+            console.error(error);
+            alert(error instanceof Error ? error.message : "Failed to add vendor.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    const filteredVendors = useMemo(() => {
+        if (!searchTerm) return vendors;
+        return vendors.filter(vendor => 
+            (vendor.brandName && vendor.brandName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (vendor.partnerName && vendor.partnerName.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [vendors, searchTerm]);
+
+
+    const VendorForm: React.FC<{ onSave: (data: any) => void; onClose: () => void; panelConfig: PanelConfig | null; isSubmitting: boolean; }> = ({ onSave, onClose, panelConfig, isSubmitting }) => {
+        const [formData, setFormData] = useState({
+            brandName: '',
+            partnerName: '',
+            fullAddress: '',
+            email: '',
+            phoneNumber: '',
+            operationalLocations: [] as string[],
+            jobRoles: [] as string[],
+            commissionStructure: {
+                type: 'Percentage Based',
+                percentage: ''
+            },
+            termsAndConditions: '',
+        });
+    
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+            const { name, value } = e.target;
+            if (name === 'commissionType') {
+                setFormData(prev => ({ ...prev, commissionStructure: { ...prev.commissionStructure, type: value } }));
+            } else if (name === 'commissionPercentage') {
+                setFormData(prev => ({ ...prev, commissionStructure: { ...prev.commissionStructure, percentage: value } }));
+            }
+            else {
+                setFormData(prev => ({ ...prev, [name]: value }));
+            }
         };
-        setVendors(prev => [finalNewVendor, ...prev]);
-        alert('Vendor added successfully!');
-      }
-      handleCloseModal();
-    } catch (error) {
-      console.error(error);
-      alert(`Failed to save vendor: ${error instanceof Error ? error.message : 'An unknown error occurred.'}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  const handleDeleteVendor = (vendorId: string) => {
-    if (window.confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) {
-        // TODO: Add Firebase deletion logic here
-        setVendors(prev => prev.filter(v => v.id !== vendorId));
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-center p-12">Loading vendors...</div>
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h2 className="text-3xl font-bold text-gray-800">Vendor Directory</h2>
-        <button onClick={() => handleOpenModal(null)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
-           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110 2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add New Vendor
-        </button>
-      </div>
-
-      {vendors.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">No vendors found</h3>
-              <p className="mt-1 text-gray-500">Get started by adding a new vendor to the directory.</p>
-          </div>
-      ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {vendors.map((vendor) => (
-              <div key={vendor.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+    
+        const handleMultiSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+            const { name, options } = e.target;
+            const value: string[] = [];
+            for (let i = 0, l = options.length; i < l; i++) {
+                if (options[i].selected) {
+                    value.push(options[i].value);
+                }
+            }
+            setFormData(prev => ({ ...prev, [name]: value as any[] }));
+        };
+    
+        const handleSubmit = (e: React.FormEvent) => {
+            e.preventDefault();
+            // Rename for firebase compatibility with old structure
+            const dataToSave = {
+                ...formData,
+                roles: formData.jobRoles,
+                locations: formData.operationalLocations
+            };
+            delete (dataToSave as any).jobRoles;
+            delete (dataToSave as any).operationalLocations;
+            onSave(dataToSave);
+        }
+    
+        return (
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input id="brandName" name="brandName" label="Brand Name" value={formData.brandName} onChange={handleChange} placeholder="e.g., Blinkit" required />
+                    <Input id="partnerName" name="partnerName" label="Partner Name" value={formData.partnerName} onChange={handleChange} placeholder="e.g., John Doe" required />
+                </div>
+    
                 <div>
-                  <div className="flex items-start gap-4 mb-4">
-                     <div className="w-12 h-12 shrink-0 rounded-lg bg-white border border-gray-100 flex items-center justify-center p-1 shadow-sm">
-                        <img 
-                            src={`https://logo.clearbit.com/${vendor.domain}`} 
-                            alt={vendor.brandName} 
-                            className="w-full h-full object-contain"
-                            onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                const parent = (e.currentTarget as HTMLImageElement).parentElement;
-                                if (parent) {
-                                  parent.classList.add('bg-gray-100');
-                                  parent.innerHTML = `<span class="text-sm font-bold text-gray-500">${vendor.brandName.substring(0, 2).toUpperCase()}</span>`;
-                                }
-                            }}
-                        />
-                     </div>
+                    <label htmlFor="fullAddress" className="block text-sm font-medium text-gray-700 mb-1">Full Address</label>
+                    <textarea id="fullAddress" name="fullAddress" value={formData.fullAddress} onChange={handleChange} rows={2} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter full address"></textarea>
+                </div>
+    
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input id="email" name="email" label="Email Address" type="email" value={formData.email} onChange={handleChange} placeholder="contact@vendor.com" required />
+                    <Input id="phoneNumber" name="phoneNumber" label="Phone Number" type="tel" value={formData.phoneNumber} onChange={handleChange} placeholder="+91 98765 43210" required />
+                </div>
+    
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 leading-tight">{vendor.brandName}</h3>
-                        {vendor.partnerName && <p className="text-sm text-gray-600">{vendor.partnerName}</p>}
-                     </div>
-                  </div>
-
-                  <div className="space-y-3">
-                     <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-9 13V3" /></svg>
-                        <span className="truncate">{vendor.email}</span>
-                     </div>
-                     <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                        <span className="truncate">{vendor.phone}</span>
-                     </div>
-                     <div className="flex items-start gap-3 text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        <span className="line-clamp-2">{vendor.fullAddress}</span>
-                     </div>
-                  </div>
+                        <label htmlFor="operationalLocations" className="block text-sm font-medium text-gray-700 mb-1">Operational Locations</label>
+                        <select multiple id="operationalLocations" name="operationalLocations" value={formData.operationalLocations} onChange={handleMultiSelectChange} className="block w-full h-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            {(panelConfig?.locations || []).map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                        </select>
+                         <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd on Mac) to select multiple.</p>
+                    </div>
+                     <div>
+                        <label htmlFor="jobRoles" className="block text-sm font-medium text-gray-700 mb-1">Job Roles</label>
+                        <select multiple id="jobRoles" name="jobRoles" value={formData.jobRoles} onChange={handleMultiSelectChange} className="block w-full h-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            {(panelConfig?.jobRoles || []).map(role => <option key={role} value={role}>{role}</option>)}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd on Mac) to select multiple.</p>
+                    </div>
                 </div>
                 
-                <div className="mt-6 flex justify-end items-center gap-2 border-t pt-4">
-                    <Button variant="danger" size="sm" onClick={() => handleDeleteVendor(vendor.id)}>Delete</Button>
-                    <Button variant="primary" size="sm" onClick={() => handleOpenModal(vendor)}>Edit</Button>
+                <fieldset className="border p-4 rounded-md">
+                    <legend className="font-medium text-sm px-2 text-gray-800">Commission Structure</legend>
+                    <div className="space-y-4 pt-2">
+                        <div className="flex items-center gap-x-6">
+                             <label className="text-sm font-medium text-gray-900">Structure Type</label>
+                            <div className="flex items-center gap-x-4">
+                                {['Percentage Based', 'Slab Based', 'Attendance Based'].map(type => (
+                                    <label key={type} className="flex items-center text-sm">
+                                        <input type="radio" name="commissionType" value={type} checked={formData.commissionStructure.type === type} onChange={handleChange} className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                                        <span className="ml-2 text-gray-700">{type}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                        {formData.commissionStructure.type === 'Percentage Based' && (
+                            <div>
+                                 <Input id="commissionPercentage" name="commissionPercentage" label="Percentage (%)" type="number" value={formData.commissionStructure.percentage} onChange={handleChange} placeholder="e.g., 10" wrapperClassName="max-w-xs" />
+                            </div>
+                        )}
+                    </div>
+                </fieldset>
+    
+                 <div>
+                    <label htmlFor="termsAndConditions" className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+                    <textarea id="termsAndConditions" name="termsAndConditions" value={formData.termsAndConditions} onChange={handleChange} rows={3} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter any terms and conditions for this vendor..."></textarea>
                 </div>
-              </div>
-            ))}
-          </div>
-      )}
+    
+    
+                <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                    <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button type="submit" variant="primary" loading={isSubmitting}>Add Vendor</Button>
+                </div>
+            </form>
+        );
+    };
 
-      {isModalOpen && (
-          <Modal
-             isOpen={isModalOpen}
-             onClose={handleCloseModal}
-             title={editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
-             maxWidth="max-w-3xl"
-          >
-              <AddVendorForm 
-                onSave={handleSaveVendor}
-                onClose={handleCloseModal} 
-                isSubmitting={isSubmitting}
-                initialData={editingVendor}
-                panelConfig={panelConfig}
-              />
-          </Modal>
-      )}
-    </div>
-  );
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 className="text-3xl font-bold text-gray-800">Vendor Directory</h2>
+                <Button onClick={() => setIsVendorModalOpen(true)}>+ Add New Vendor</Button>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <Input 
+                    id="vendor-search" 
+                    placeholder="Search by brand or partner name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    wrapperClassName="mb-0"
+                />
+            </div>
+
+            {isLoading ? (
+                <div className="text-center py-10 text-gray-500">Loading vendors...</div>
+            ) : filteredVendors.length === 0 ? (
+                <div className="bg-white text-center py-12 rounded-xl border border-gray-200 text-gray-500">
+                    {searchTerm ? `No vendors found for "${searchTerm}".` : "No vendors have been added yet."}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredVendors.map(vendor => (
+                        <div key={vendor.id} className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col p-6 hover:shadow-lg transition-shadow duration-300">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-900">{vendor.brandName}</h3>
+                                    <p className="text-sm text-gray-500">{vendor.partnerName}</p>
+                                </div>
+                                <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                            </div>
+
+                            <div className="space-y-3 text-sm flex-grow">
+                                <div className="flex items-center gap-2 text-gray-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                    <span className="truncate">{vendor.email}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                    <span>{vendor.phoneNumber || 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-xs text-gray-500 uppercase mt-4 mb-2">Roles</h4>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {(vendor.roles || []).map((role: string) => (
+                                            <span key={role} className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs rounded-md">{role}</span>
+                                        ))}
+                                         {(vendor.roles || []).length === 0 && <span className="text-xs text-gray-400">No roles specified</span>}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-xs text-gray-500 uppercase mt-3 mb-2">Locations</h4>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {(vendor.locations || []).map((loc: string) => (
+                                            <span key={loc} className="bg-gray-100 text-gray-700 px-2 py-0.5 text-xs rounded-md">{loc}</span>
+                                        ))}
+                                        {(vendor.locations || []).length === 0 && <span className="text-xs text-gray-400">No locations specified</span>}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => alert(`Viewing details for ${vendor.brandName}`)}>View Details</Button>
+                                <Button variant="secondary" size="sm" onClick={() => alert(`Editing ${vendor.brandName}`)}>Edit</Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <Modal isOpen={isVendorModalOpen} onClose={() => setIsVendorModalOpen(false)} title="Add New Vendor" maxWidth="max-w-4xl">
+                <VendorForm onSave={handleAddVendor} onClose={() => setIsVendorModalOpen(false)} panelConfig={panelConfig} isSubmitting={isSubmitting} />
+            </Modal>
+        </div>
+    );
 };
 
+// FIX: Add missing DemoRequestsView component
 const DemoRequestsView: React.FC = () => {
     const [requests, setRequests] = useState<DemoRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -2835,124 +2960,81 @@ const DemoRequestsView: React.FC = () => {
         });
         return () => unsubscribe();
     }, []);
-    
+
     return (
         <div className="space-y-6">
             <h2 className="text-3xl font-bold text-gray-800">Demo Requests</h2>
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact Info</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team Details</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request Date</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
-                            </tr>
-                        </thead>
-                         <tbody className="bg-white divide-y divide-gray-200">
-                             {isLoading ? (<tr><td colSpan={5} className="text-center py-10 text-gray-500">Loading requests...</td></tr>)
-                             : requests.length > 0 ? requests.map(req => (
-                                 <tr key={req.id}>
-                                     <td className="px-6 py-4 font-medium text-gray-900">{req.companyName}</td>
-                                     <td className="px-6 py-4 text-sm text-gray-600">
-                                        <div>{req.email}</div>
-                                        <div className="text-xs text-gray-500">{req.address}</div>
-                                     </td>
-                                     <td className="px-6 py-4 text-sm text-gray-600">
-                                        <div>Head: {req.teamHead}</div>
-                                        <div className="text-xs">Size: {req.teamSize}</div>
-                                     </td>
-                                     <td className="px-6 py-4 text-sm text-gray-500">{new Date(req.requestDate).toLocaleString()}</td>
-                                     <td className="px-6 py-4 text-right text-sm">
-                                         <Button variant="primary" size="sm" onClick={() => alert('Activating demo...')}>Activate Demo</Button>
-                                     </td>
-                                 </tr>
-                             )) : (<tr><td colSpan={5} className="text-center py-10 text-gray-500">No demo requests found.</td></tr>)}
-                         </tbody>
-                    </table>
-                </div>
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team Head / Size</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request Date</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {isLoading ? (<tr><td colSpan={4} className="text-center py-10">Loading requests...</td></tr>) :
+                            requests.length === 0 ? (<tr><td colSpan={4} className="text-center py-10">No demo requests found.</td></tr>) :
+                                requests.map(req => (
+                                    <tr key={req.id}>
+                                        <td className="px-6 py-4 font-medium">{req.companyName}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{req.email}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{req.teamHead} ({req.teamSize})</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{new Date(req.requestDate).toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 };
 
+// FIX: Add missing RevenueView component
 const RevenueView: React.FC = () => {
     const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [currentMonth, setCurrentMonth] = useState(() => {
+    const [selectedMonth, setSelectedMonth] = useState(() => {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        return `${year}-${month}`;
+        return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
     });
 
     useEffect(() => {
         const fetchRevenue = async () => {
             setIsLoading(true);
-            try {
-                const data = await getRevenueData(currentMonth);
-                setRevenueData(data);
-            } catch (error) {
-                console.error("Failed to fetch revenue data:", error);
-                setRevenueData(null);
-            } finally {
-                setIsLoading(false);
-            }
+            const data = await getRevenueData(selectedMonth);
+            setRevenueData(data);
+            setIsLoading(false);
         };
         fetchRevenue();
-    }, [currentMonth]);
-    
-    const formatCurrency = (amount: number) => `₹${(amount / 100000).toFixed(2)}L`;
-    const profit = revenueData ? revenueData.totalRevenue - revenueData.totalCost : 0;
-    
-    const Table: React.FC<{ title: string; headers: string[]; data: any[], formatRow: (item: any) => React.ReactNode }> = ({ title, headers, data, formatRow }) => (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">{title}</h3>
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>{headers.map(h => <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">{data.map(formatRow)}</tbody>
-                </table>
-            </div>
-        </div>
-    );
+    }, [selectedMonth]);
+
+    const formatCurrency = (val: number) => `₹${(val / 100000).toFixed(2)}L`;
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex justify-between items-center">
                 <h2 className="text-3xl font-bold text-gray-800">Revenue Dashboard</h2>
-                <Input type="month" value={currentMonth} onChange={e => setCurrentMonth(e.target.value)} wrapperClassName="mb-0 w-full sm:w-auto" />
+                <Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} wrapperClassName="mb-0 w-48" />
             </div>
-
-            {isLoading ? <div className="text-center py-12">Loading revenue data...</div> :
-             !revenueData ? <div className="text-center py-12 bg-white rounded-xl">No revenue data found for the selected month.</div> : (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <StatCard title="Total Revenue" value={formatCurrency(revenueData.totalRevenue)} valueColor="text-green-600" />
-                        <StatCard title="Total Cost" value={formatCurrency(revenueData.totalCost)} valueColor="text-red-600" />
-                        <StatCard title="Net Profit" value={formatCurrency(profit)} valueColor={profit >= 0 ? 'text-blue-600' : 'text-red-600'} />
-                    </div>
-                    <Table title="Team Profitability" headers={['Member', 'Role', 'Revenue', 'Cost', 'Profit']} data={revenueData.teamProfitability} formatRow={(item) => (
-                        <tr key={item.id}>
-                            <td className="px-6 py-4 font-medium">{item.member}</td><td className="px-6 py-4">{item.role}</td><td className="px-6 py-4 text-green-600">{formatCurrency(item.revenue)}</td><td className="px-6 py-4 text-red-600">{formatCurrency(item.cost)}</td><td className="px-6 py-4 font-semibold">{formatCurrency(item.revenue - item.cost)}</td>
-                        </tr>
-                    )}/>
-                    <Table title="Client/Vendor Profitability" headers={['Name', 'Type', 'Revenue In', 'Cost Out', 'Profit']} data={revenueData.clientProfitability} formatRow={(item) => (
-                        <tr key={item.id}>
-                            <td className="px-6 py-4 font-medium">{item.name}</td><td className="px-6 py-4">{item.type}</td><td className="px-6 py-4 text-green-600">{formatCurrency(item.revenueIn)}</td><td className="px-6 py-4 text-red-600">{formatCurrency(item.costOut)}</td><td className="px-6 py-4 font-semibold">{formatCurrency(item.revenueIn - item.costOut)}</td>
-                        </tr>
-                    )}/>
-                </div>
-            )}
+            {isLoading ? <div className="text-center py-10">Loading revenue data...</div> :
+                !revenueData ? <div className="text-center py-10 bg-white rounded-lg">No data found for {selectedMonth}.</div> :
+                    (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white p-6 rounded-lg shadow-sm border"><h4 className="text-sm font-medium text-gray-500">Total Revenue</h4><p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(revenueData.totalRevenue)}</p></div>
+                                <div className="bg-white p-6 rounded-lg shadow-sm border"><h4 className="text-sm font-medium text-gray-500">Total Cost</h4><p className="text-3xl font-bold text-red-600 mt-1">{formatCurrency(revenueData.totalCost)}</p></div>
+                                <div className="bg-white p-6 rounded-lg shadow-sm border"><h4 className="text-sm font-medium text-gray-500">Net Profit</h4><p className="text-3xl font-bold text-blue-600 mt-1">{formatCurrency(revenueData.totalRevenue - revenueData.totalCost)}</p></div>
+                            </div>
+                            {/* More detailed tables for team and client profitability would go here */}
+                        </div>
+                    )
+            }
         </div>
     );
 };
-
-// ... other view components
 
 const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
   userType,
@@ -2973,22 +3055,44 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
   onUpdateBranding,
   currentUser,
   currentUserProfile,
+  currentLogoSrc,
+  onLogoUpload,
 }) => {
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [vendors, setVendors] = useState<any[]>([]);
   const [panelConfig, setPanelConfig] = useState<PanelConfig | null>(null);
   const [isFetchingConfig, setIsFetchingConfig] = useState(true);
+  const [allPartnerRequirements, setAllPartnerRequirements] = useState<(PartnerRequirement & { partnerUid: string })[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
         setIsFetchingConfig(true);
-        const [fetchedVendors, fetchedConfig] = await Promise.all([getVendors(), getPanelConfig()]);
+        const [fetchedVendors, fetchedConfig, fetchedUsers] = await Promise.all([getVendors(), getPanelConfig(), getUsers()]);
         setVendors(fetchedVendors);
         setPanelConfig(fetchedConfig);
+        setUsers(fetchedUsers);
         setIsFetchingConfig(false);
     };
     fetchData();
+
+    const unsubscribeReqs = onAllPartnerRequirementsChange(setAllPartnerRequirements);
+
+    return () => {
+        unsubscribeReqs();
+    };
   }, []);
+
+  const handleUpdatePanelConfig = async (newConfig: PanelConfig) => {
+    try {
+        await updatePanelConfig(newConfig);
+        setPanelConfig(newConfig); // Update local state
+    } catch (error) {
+        console.error("Failed to update panel config:", error);
+        alert("There was an error saving the panel options.");
+    }
+  };
+
 
   const renderContent = () => {
     switch (activeAdminMenuItem) {
@@ -2996,23 +3100,40 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
         if (userType === UserType.ADMIN) {
           return (
             <div className="space-y-6">
+               {/* 1. Stat Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Candidate Pipeline" metrics={[ { label: 'Active', value: pipelineStats.active, color: 'text-blue-500' }, { label: 'Interview', value: pipelineStats.interview, color: 'text-indigo-500' } ]} />
-                <StatCard title="Vendors" value={vendorStats.total} metrics={[ { label: 'Active', value: vendorStats.total }, { label: 'Inactive', value: 0 } ]} />
+                <StatCard 
+                  title="Candidate Pipeline" 
+                  metrics={[
+                    { label: 'Active', value: pipelineStats.active, color: 'text-blue-600' },
+                    { label: 'Interview', value: pipelineStats.interview, color: 'text-purple-600' },
+                    { label: 'Rejected', value: pipelineStats.rejected, color: 'text-red-600' },
+                    { label: 'Quit', value: pipelineStats.quit, color: 'text-gray-800' }
+                  ]}
+                />
+                <StatCard title="Vendors" metrics={[ { label: 'Total', value: vendorStats.total }, { label: 'Active', value: vendorStats.total }, { label: 'Inactive', value: 0 } ]} isSplitMetrics />
                 <StatCard title="Complaints" value={complaintStats.active + complaintStats.closed} valueColor="text-red-500" metrics={[ { label: 'Active', value: complaintStats.active, color: 'text-red-500' }, { label: 'Closed', value: complaintStats.closed, color: 'text-green-500' } ]} />
                 <StatCard title="Partner Requirements" value={partnerRequirementStats.total} valueColor="text-purple-500" metrics={[ { label: 'Pending', value: partnerRequirementStats.pending, color: 'text-yellow-500' }, { label: 'Approved', value: partnerRequirementStats.approved, color: 'text-green-500' }]} />
               </div>
-              <HRUpdatesCard />
-              <TeamWiseTable />
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <TeamPerformanceTable data={teamPerformance} />
-                </div>
-                <div className="grid grid-cols-1 gap-6">
-                  <ProgressBarCard title="Candidates by Process" data={candidatesByProcess} />
-                  <ProgressBarCard title="Candidates by Role" data={candidatesByRole} />
-                </div>
+              
+              {/* 2. Progress Bars */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ProgressBarCard title="Candidates by Process" data={candidatesByProcess} />
+                <ProgressBarCard title="Candidates by Role" data={candidatesByRole} />
               </div>
+
+              {/* 3. HR Updates */}
+              <HRUpdatesCard />
+
+              {/* 4. Requirements Breakdown */}
+              <RequirementsBreakdownView 
+                jobs={jobs}
+                allPartnerRequirements={allPartnerRequirements}
+                users={users}
+              />
+
+              {/* 5. Team Performance */}
+              <TeamPerformanceTable data={teamPerformance} />
             </div>
           );
         }
@@ -3070,7 +3191,20 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
         return <DemoRequestsView />;
       case AdminMenuItem.Revenue:
         return <RevenueView />;
-      // ... Settings case ...
+      
+      case AdminMenuItem.Settings:
+        return (
+            <SettingsView
+                branding={branding}
+                onUpdateBranding={onUpdateBranding}
+                currentLogoSrc={currentLogoSrc}
+                onLogoUpload={onLogoUpload}
+                currentUserProfile={currentUserProfile}
+                panelConfig={panelConfig}
+                onUpdatePanelConfig={handleUpdatePanelConfig}
+                vendors={vendors}
+            />
+        );
 
       // --- HR VIEWS ---
       case AdminMenuItem.ManagePayroll: return <ManagePayrollView />;
@@ -3084,7 +3218,7 @@ const AdminDashboardContent: React.FC<AdminDashboardContentProps> = ({
       case AdminMenuItem.ManageSupervisors: return <PartnerManageSupervisorsView />;
       case AdminMenuItem.PartnerUpdateStatus: return <PartnerUpdateStatusView />;
       case AdminMenuItem.PartnerRequirements: return <PartnerRequirementsView currentUser={currentUser} currentUserProfile={currentUserProfile} jobs={jobs} />;
-      case AdminMenuItem.PartnerRequirementsDetail: return <PartnerRequirementsDetailView onBack={() => onAdminMenuItemClick(AdminMenuItem.Dashboard)} />;
+      case AdminMenuItem.PartnerRequirementsDetail: return <PartnerRequirementsDetailView onBack={() => onAdminMenuItemClick(AdminMenuItem.Dashboard)} jobs={jobs} allPartnerRequirements={allPartnerRequirements} users={users} />;
       case AdminMenuItem.PartnerInvoices: return <PartnerInvoicesView currentUser={currentUser} />;
       case AdminMenuItem.PartnerSalaryUpdates: return <PartnerSalaryUpdatesView currentUser={currentUser} />;
       case AdminMenuItem.PartnerHelpCenter: return <HelpCenterView />;

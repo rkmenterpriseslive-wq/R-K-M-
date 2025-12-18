@@ -23,7 +23,7 @@ interface DashboardStats {
 }
 
 const initialStats: DashboardStats = {
-  pipeline: { active: 125, interview: 30, rejected: 45, quit: 10 },
+  pipeline: { active: 8, interview: 0, rejected: 0, quit: 0 },
   vendor: { total: 3 },
   complaint: { active: 2, closed: 18 },
   partnerRequirement: { total: 5, pending: 2, approved: 3 },
