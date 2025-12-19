@@ -191,6 +191,17 @@ export interface TeamMemberPerformance {
   successRate: number; // Stored as a percentage (e.g., 75 for 75%)
 }
 
+export interface TeamMember {
+  name: string;
+  email: string;
+  mobile: string;
+  salary: string;
+  role: string;
+  reportingManager: string;
+  workingLocations: string[];
+  vendors: string[];
+}
+
 // Admin menu items for navigation
 export enum AdminMenuItem {
   Dashboard = 'Dashboard',

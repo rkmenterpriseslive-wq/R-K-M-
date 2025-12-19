@@ -1,9 +1,16 @@
 import React from 'react';
 import Button from './Button';
-import { UserType, HeaderProps } from '../types'; // Import HeaderProps
+import { UserType, HeaderProps } from '../types';
 
 const Header: React.FC<HeaderProps> = ({ userType, onLoginSelect, onLogout, onHireUsClick, logoSrc }) => {
   const isLoggedIn = userType !== UserType.NONE;
+
+  const loginButtons = [
+    { label: 'Candidate Login', type: UserType.CANDIDATE },
+    { label: 'Partner Login', type: UserType.PARTNER },
+    { label: 'Team Login', type: UserType.TEAM },
+    { label: 'Admin Login', type: UserType.ADMIN },
+  ];
 
   return (
     <header className="bg-[#191e44] shadow-md py-4 px-6 md:px-8 sticky top-0 z-50">
@@ -27,27 +34,22 @@ const Header: React.FC<HeaderProps> = ({ userType, onLoginSelect, onLogout, onHi
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onLoginSelect(UserType.CANDIDATE)}
+                onClick={() => onLoginSelect(UserType.ADMIN)}
                 className="border border-white text-white hover:bg-white/10 transform hover:-translate-y-0.5"
               >
-                Candidate Login
+                Post a Job
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onLoginSelect(UserType.PARTNER)}
-                className="border border-white text-white hover:bg-white/10 transform hover:-translate-y-0.5"
-              >
-                Partner Login
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onLoginSelect(UserType.TEAM)}
-                className="border border-white text-white hover:bg-white/10 transform hover:-translate-y-0.5"
-              >
-                Team Login
-              </Button>
+              {loginButtons.map(btn => (
+                <Button
+                  key={btn.label}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onLoginSelect(btn.type)}
+                  className="border border-white text-white hover:bg-white/10 transform hover:-translate-y-0.5"
+                >
+                  {btn.label}
+                </Button>
+              ))}
             </>
           ) : (
             <>

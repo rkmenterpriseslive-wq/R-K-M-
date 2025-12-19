@@ -51,6 +51,7 @@ import StoreEmployeesView from '../supervisor/StoreEmployeesView';
 import HRDashboardView from '../hr/HRDashboardView';
 import { getHRDashboardStats } from '../../utils/hrService';
 import PartnerDashboardView from '../partner/PartnerDashboardView';
+// FIX: Import RevenueData type.
 import { getRevenueData, RevenueData, getPanelConfig, updatePanelConfig, createVendor, getVendors, onDailyLineupsChange, addDailyLineup, updateDailyLineup, onCandidatesChange, updateCandidateStatus, addCandidateToSelection, updateCandidate, onAttendanceForMonthChange, saveEmployeeAttendance, onComplaintsChange, addComplaint, updateComplaint, onWarningLettersChange, addWarningLetter, updateWarningLetter, onDemoRequestsChange, getDailyLineups, getCandidates, getComplaints, getWarningLetters, getAttendanceForMonth, onAllPartnerRequirementsChange, getUsers } from '../../services/firebaseService';
 import HelpCenterView from '../candidate/HelpCenterView';
 import HRUpdatesCard from './HRUpdatesCard';
@@ -773,18 +774,17 @@ const SelectionDashboardView: React.FC<{ teamData: TeamMemberPerformance[], user
   }, [isTeamLead]);
 
   const summaryData = useMemo(() => {
-    const summary = candidates.reduce((acc, candidate) => {
-        if (!acc[candidate.recruiter]) {
-            acc[candidate.recruiter] = { member: candidate.recruiter, sourced: 0, onWay: 0, interview: 0, selected: 0, total: 0 };
+    const summary: Record<string, { member: string; sourced: number; onWay: number; interview: number; selected: number; total: number; }> = {};
+    for (const candidate of candidates) {
+        if (!summary[candidate.recruiter]) {
+            summary[candidate.recruiter] = { member: candidate.recruiter, sourced: 0, onWay: 0, interview: 0, selected: 0, total: 0 };
         }
-        acc[candidate.recruiter].total++;
-        if (candidate.status === 'Sourced') acc[candidate.recruiter].sourced++;
-        if (candidate.status === 'On the way') acc[candidate.recruiter].onWay++;
-        if (candidate.status === 'Interview') acc[candidate.recruiter].interview++;
-        if (candidate.status === 'Selected') acc[candidate.recruiter].selected++;
-        return acc;
-    }, {} as Record<string, any>);
-    
+        summary[candidate.recruiter].total++;
+        if (candidate.status === 'Sourced') summary[candidate.recruiter].sourced++;
+        if (candidate.status === 'On the way') summary[candidate.recruiter].onWay++;
+        if (candidate.status === 'Interview') summary[candidate.recruiter].interview++;
+        if (candidate.status === 'Selected') summary[candidate.recruiter].selected++;
+    }
     return Object.values(summary);
   }, [candidates]);
 
@@ -2244,11 +2244,12 @@ const PartnerRequirementsDetailView: React.FC<{
     }, { total: 0, pending: 0, approved: 0 });
     
     // Create breakdowns
-    // FIX: Replaced the 'reduce' implementation with a more explicit for...of loop.
-    // This avoids a potential complex type inference issue with 'reduce' that could lead to the "unknown index type" error.
-    const createBreakdown = (data: UnifiedRequirement[], key: keyof UnifiedRequirement) => {
+// FIX: Changed parameter types to any[] and string to resolve index signature error.
+    // FIX: Using any[] and string to resolve index signature error.
+    const createBreakdown = (data: any[], key: string) => {
         const breakdown: Record<string, { total: number, pending: number, approved: number }> = {};
         for (const item of data) {
+            
             const group = String(item[key] || 'N/A');
             if (!breakdown[group]) {
                 breakdown[group] = { total: 0, pending: 0, approved: 0 };
@@ -2364,7 +2365,7 @@ const ReportsView: React.FC<{ userType: UserType, currentUser?: AppUser | null }
     link.click();
     document.body.removeChild(link);
   };
-
+// FIX: Using any[] to resolve index signature error with dynamic data shapes.
   const convertToCSV = (data: any[], headers: string[]) => {
     const headerRow = headers.join(',');
     const rows = data.map(row => {
@@ -2400,25 +2401,25 @@ const ReportsView: React.FC<{ userType: UserType, currentUser?: AppUser | null }
             case 'lineup': {
                 const lineups = await getFilteredDataByDate(getDailyLineups, 'createdAt');
                 const headers: (keyof DailyLineup)[] = ['id', 'candidateName', 'contact', 'vendor', 'role', 'location', 'storeName', 'submittedBy', 'callStatus', 'interviewDateTime', 'createdAt'];
-                csvContent = convertToCSV(lineups, headers);
+                csvContent = convertToCSV(lineups, headers as string[]);
                 break;
             }
             case 'selection': {
                 const candidates = await getFilteredDataByDate(getCandidates, 'date');
                 const headers: (keyof Candidate)[] = ['id', 'name', 'phone', 'email', 'role', 'status', 'date', 'recruiter', 'vendor', 'storeName', 'quitDate'];
-                csvContent = convertToCSV(candidates, headers);
+                csvContent = convertToCSV(candidates, headers as string[]);
                 break;
             }
             case 'complaints': {
                 const complaints = await getFilteredDataByDate(getComplaints, 'date');
                 const headers: (keyof Complaint)[] = ['id', 'ticketNo', 'candidate', 'vendor', 'role', 'issue', 'status', 'date', 'assignedManager', 'resolution'];
-                csvContent = convertToCSV(complaints, headers);
+                csvContent = convertToCSV(complaints, headers as string[]);
                 break;
             }
             case 'warning': {
                 const letters = await getFilteredDataByDate(getWarningLetters, 'issueDate');
                 const headers: (keyof WarningLetter)[] = ['id', 'ticketNo', 'employeeName', 'reason', 'issueDate', 'issuedBy', 'status'];
-                csvContent = convertToCSV(letters, headers);
+                csvContent = convertToCSV(letters, headers as string[]);
                 break;
             }
             case 'attendance': {
@@ -2454,7 +2455,7 @@ const ReportsView: React.FC<{ userType: UserType, currentUser?: AppUser | null }
                     return perf;
                 });
                 const headers: (keyof TeamMemberPerformance)[] = ['teamMember', 'role', 'total', 'selected', 'pending', 'rejected', 'quit', 'successRate'];
-                csvContent = convertToCSV(reportData, headers);
+                csvContent = convertToCSV(reportData, headers as string[]);
                 break;
             }
             default: throw new Error("Invalid report type selected.");
@@ -2614,7 +2615,7 @@ const RequirementsBreakdownView: React.FC<{
                             </table>
                         </div>
                     </div>
-                )};
+                )}
             case 'Store Wise': {
                 const sortedByStore = [...requirements].sort((a, b) => a.store.localeCompare(b.store));
                 return (
@@ -2992,7 +2993,6 @@ const DemoRequestsView: React.FC = () => {
     );
 };
 
-// FIX: Add missing RevenueView component
 const RevenueView: React.FC = () => {
     const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -3011,27 +3011,117 @@ const RevenueView: React.FC = () => {
         fetchRevenue();
     }, [selectedMonth]);
 
-    const formatCurrency = (val: number) => `₹${(val / 100000).toFixed(2)}L`;
+    // Formatters to match the image
+    const formatRupee = (val: number) => `₹ ${val.toLocaleString('en-IN')}`;
+    const formatPercentage = (val: number) => `${val.toFixed(1)}%`;
+
+    const netProfit = revenueData ? revenueData.totalRevenue - revenueData.totalCost : 0;
+    const profitMargin = revenueData && revenueData.totalRevenue > 0 ? (netProfit / revenueData.totalRevenue) * 100 : 0;
+
+    const StatDisplay: React.FC<{ title: string; value: string; color: string; }> = ({ title, value, color }) => (
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <p className="text-sm text-gray-500">{title}</p>
+            <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-bold text-gray-800">Revenue Dashboard</h2>
-                <Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} wrapperClassName="mb-0 w-48" />
+        <div className="space-y-8">
+            <div className="flex justify-between items-start">
+                <div>
+                    <h2 className="text-3xl font-bold text-gray-800">Revenue & Profitability</h2>
+                    <p className="text-gray-600 mt-1">Monthly financials based on candidate data.</p>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-500 text-right mb-1">SELECT MONTH</label>
+                    <Input 
+                        type="month" 
+                        value={selectedMonth} 
+                        onChange={e => setSelectedMonth(e.target.value)} 
+                        wrapperClassName="mb-0" 
+                        className="w-48 text-right"
+                    />
+                </div>
             </div>
-            {isLoading ? <div className="text-center py-10">Loading revenue data...</div> :
-                !revenueData ? <div className="text-center py-10 bg-white rounded-lg">No data found for {selectedMonth}.</div> :
-                    (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-white p-6 rounded-lg shadow-sm border"><h4 className="text-sm font-medium text-gray-500">Total Revenue</h4><p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(revenueData.totalRevenue)}</p></div>
-                                <div className="bg-white p-6 rounded-lg shadow-sm border"><h4 className="text-sm font-medium text-gray-500">Total Cost</h4><p className="text-3xl font-bold text-red-600 mt-1">{formatCurrency(revenueData.totalCost)}</p></div>
-                                <div className="bg-white p-6 rounded-lg shadow-sm border"><h4 className="text-sm font-medium text-gray-500">Net Profit</h4><p className="text-3xl font-bold text-blue-600 mt-1">{formatCurrency(revenueData.totalRevenue - revenueData.totalCost)}</p></div>
-                            </div>
-                            {/* More detailed tables for team and client profitability would go here */}
-                        </div>
-                    )
-            }
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatDisplay title="Total Revenue" value={formatRupee(revenueData?.totalRevenue || 0)} color="text-green-600" />
+                <StatDisplay title="Total Operational Cost" value={formatRupee(revenueData?.totalCost || 0)} color="text-red-600" />
+                <StatDisplay title="Net Profit" value={formatRupee(netProfit)} color="text-blue-600" />
+                <StatDisplay title="Profit Margin" value={formatPercentage(profitMargin)} color="text-purple-600" />
+            </div>
+
+            {/* Team Wise Profitability */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Team Wise Profitability</h3>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead>
+                            <tr className="border-b">
+                                {['TEAM MEMBER', 'ROLE', 'REVENUE GENERATED', 'SALARY COST', 'NET PROFIT'].map(h => (
+                                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {isLoading ? (
+                                <tr><td colSpan={5} className="text-center py-10 text-gray-500">Loading data...</td></tr>
+                            ) : !revenueData || !revenueData.teamProfitability || revenueData.teamProfitability.length === 0 ? (
+                                <tr><td colSpan={5} className="text-center py-10 text-gray-500">No team data available.</td></tr>
+                            ) : (
+                                revenueData.teamProfitability.map(item => {
+                                    const net = item.revenue - item.cost;
+                                    return (
+                                        <tr key={item.id} className="border-b last:border-0 hover:bg-gray-50">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{item.member}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{item.role}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{formatRupee(item.revenue)}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{formatRupee(item.cost)}</td>
+                                            <td className={`px-6 py-4 text-sm font-semibold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupee(net)}</td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Vendor / Client Profitability */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <h3 className="px-6 py-4 text-lg font-semibold text-gray-800 border-b">Vendor / Client Profitability</h3>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead>
+                            <tr className="border-b">
+                                {['VENDOR / CLIENT', 'TYPE', 'REVENUE (IN)', 'COST (OUT)', 'PROFIT / LOSS'].map(h => (
+                                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {isLoading ? (
+                                <tr><td colSpan={5} className="text-center py-10 text-gray-500">Loading data...</td></tr>
+                            ) : !revenueData || !revenueData.clientProfitability || revenueData.clientProfitability.length === 0 ? (
+                                <tr><td colSpan={5} className="text-center py-10 text-gray-500">No vendor data available.</td></tr>
+                            ) : (
+                                revenueData.clientProfitability.map(item => {
+                                    const profitLoss = item.revenueIn - item.costOut;
+                                    return (
+                                        <tr key={item.id} className="border-b last:border-0 hover:bg-gray-50">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{item.type}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{formatRupee(item.revenueIn)}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{formatRupee(item.costOut)}</td>
+                                            <td className={`px-6 py-4 text-sm font-semibold ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupee(profitLoss)}</td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 };
