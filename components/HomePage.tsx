@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 // Input component is no longer used for the search bar to allow custom styling
 import Button from './Button';
@@ -78,14 +77,16 @@ const HomePage: React.FC<HomePageProps> = ({ jobs, onApplyNow, currentUserType, 
               id="searchExperience"
               value={searchExperience}
               onChange={(e) => setSearchExperience(e.target.value)}
-              className="w-full pl-8 md:pl-0 pr-2 py-2 text-sm focus:outline-none bg-transparent appearance-none"
+              className={`w-full pl-8 md:pl-0 pr-2 py-2 text-sm focus:outline-none bg-transparent appearance-none ${
+                searchExperience === '' ? 'text-gray-500 text-center' : 'text-gray-900 text-left'
+              }`}
               aria-label="Your Experience"
             >
               <option value="">Your Experience</option>
-              <option value="Fresher">Fresher</option>
-              <option value="1-3 Years">1-3 Years</option>
-              <option value="3-5 Years">3-5 Years</option>
-              <option value="5+ Years">5+ Years</option>
+              <option value="Fresher" className="text-black">Fresher</option>
+              <option value="1-3 Years" className="text-black">1-3 Years</option>
+              <option value="3-5 Years" className="text-black">3-5 Years</option>
+              <option value="5+ Years" className="text-black">5+ Years</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>

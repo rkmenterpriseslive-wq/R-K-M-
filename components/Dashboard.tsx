@@ -19,7 +19,7 @@ import CandidateLayout from './candidate/CandidateLayout';
 import CandidateDashboardContent from './candidate/CandidateDashboardContent';
 
 
-const Dashboard: React.FC<DashboardProps> = ({
+const Dashboard: React.FC<DashboardProps & { onHomeClick?: () => void }> = ({
   userType,
   jobs,
   onAddJob,
@@ -44,9 +44,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   currentUser,
   currentUserProfile,
   onApplyNow,
-  isCvComplete,
   onCvCompletion,
   onProfileUpdate,
+  onHomeClick
 }) => {
   const renderDashboardContent = () => {
     switch (userType) {
@@ -64,6 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             onLogout={onLogout}
             activeAdminMenuItem={activeAdminMenuItem}
             onAdminMenuItemClick={onAdminMenuItemClick}
+            onHomeClick={onHomeClick}
           >
             <AdminDashboardContent
               pipelineStats={pipelineStats}
@@ -97,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             onLogout={onLogout}
             activeCandidateMenuItem={activeCandidateMenuItem}
             onCandidateMenuItemClick={onCandidateMenuItemClick}
-            isCvComplete={isCvComplete!}
+            onHomeClick={onHomeClick}
           >
             <CandidateDashboardContent
               activeCandidateMenuItem={activeCandidateMenuItem}

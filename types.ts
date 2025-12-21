@@ -95,6 +95,11 @@ export interface UserProfile {
   // Partner-specific fields
   vendorName?: string;
   partnerName?: string;
+  storeLocation?: string;
+
+  // HR/Team specific fields for filtering
+  workingLocations?: string[];
+  vendors?: string[]; // Used for assigned job categories/processes
 }
 
 // New Employee Interface
@@ -141,6 +146,9 @@ export interface HeaderProps {
   onLogout: () => void;
   onHireUsClick: () => void; // Re-added prop for "Hire us" button
   logoSrc: string | null; // New prop for logo source
+  isShowingDashboard?: boolean;
+  onHomeClick?: () => void;
+  onDashboardClick?: () => void;
 }
 
 // New interfaces for Admin Dashboard data
@@ -241,7 +249,7 @@ export enum AdminMenuItem {
 
 // New enum for Candidate panel
 export enum CandidateMenuItem {
-  MyJobs = 'My Jobs',
+  JobBoard = 'Job Board',
   MyDocuments = 'My Documents',
   MyProfile = 'My Profile',
   CVGenerator = 'CV Generator',
@@ -484,7 +492,10 @@ export interface DailyLineup {
     storeName: string;
     submittedBy: string;
     callStatus: CallStatus;
-    interviewDateTime: string | null;
+    interviewDateTime?: string | null; // Old field for compatibility
+    interviewDate?: string | null;
+    interviewTime?: string | null;
+    interviewPlace?: string | null;
     createdAt: string; // For sorting
 }
 
@@ -540,7 +551,6 @@ export interface DashboardProps { // Updated DashboardProps to match App.tsx and
   activeCandidateMenuItem: CandidateMenuItem;
   onCandidateMenuItemClick: (item: CandidateMenuItem) => void;
   onApplyNow: (job: Job) => void;
-  isCvComplete?: boolean;
   onCvCompletion: (cvData: Partial<UserProfile>) => void;
   onProfileUpdate: (profileData: Partial<UserProfile>) => void;
 }
@@ -553,6 +563,7 @@ export interface AdminLayoutProps {
   onLogout: () => void;
   activeAdminMenuItem: AdminMenuItem; // New prop for active menu item
   onAdminMenuItemClick: (item: AdminMenuItem) => void; // New prop for menu item click handler
+  onHomeClick?: () => void;
 }
 
 export interface SidebarProps {
@@ -608,13 +619,13 @@ export interface CandidateLayoutProps {
   onLogout: () => void;
   activeCandidateMenuItem: CandidateMenuItem;
   onCandidateMenuItemClick: (item: CandidateMenuItem) => void;
-  isCvComplete: boolean;
+  onHomeClick?: () => void;
 }
 
 export interface CandidateSidebarProps {
   activeItem: CandidateMenuItem;
   onItemClick: (item: CandidateMenuItem) => void;
-  isCvComplete: boolean;
+  onHomeClick?: () => void;
 }
 
 export interface CandidateDashboardContentProps {

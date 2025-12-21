@@ -46,10 +46,10 @@ const CVGeneratorView: React.FC<CVGeneratorViewProps> = ({ onCvComplete, current
             setEmail(currentUserProfile.email || '');
 
             if (isProfileIncomplete) {
-                // Load demo data for new/incomplete profiles
-                setName('HIMALAYA RAGHAV');
-                setPhone('6397478526');
-                setAddress('H.NO-515 Ghukna More, Near Mount Velly School, Ghaziabad UP-201001');
+                // Load demo data for new/incomplete profiles based on the provided CV
+                setName('Candidate Name');
+                setPhone('XXXXXXXXXX');
+                setAddress('H.NO-XX Address City, UP-Pin code');
                 setSummary('To apply my knowledge I gained my academies & corporate sector and put them in practice in corporate world.');
                 setSkills('Basic Knowledge of Computer.');
                 setExperiences([
@@ -58,18 +58,18 @@ const CVGeneratorView: React.FC<CVGeneratorViewProps> = ({ onCvComplete, current
                     { id: 3, role: 'Associate', company: 'Amaron', duration: '1 Year', description: '' }
                 ]);
                 setEducations([
-                    { id: 1, degree: 'High School', university: 'UP Board', duration: 'Passed' },
-                    { id: 2, degree: 'Intermediate', university: 'UP Board', duration: 'Passed' },
-                    { id: 3, degree: 'BA', university: 'CCS University', duration: 'Pursuing' }
+                    { id: 1, degree: 'High School', university: 'From Board', duration: 'Passed Year XXXX' },
+                    { id: 2, degree: 'Intermediate', university: 'From Board', duration: 'Passed Year XXXX' },
+                    { id: 3, degree: 'Graduate', university: 'From University', duration: 'From Year XXXX' }
                 ]);
-                setFatherName('Mr. Avdesh Kumar');
-                setDob('2004-05-28');
+                setFatherName('Mr. Candidate Father Name');
+                setDob('1999-01-01'); // Placeholder date
                 setNationality('Indian');
                 setGender('Male');
                 setMaritalStatus('Single'); // Mapping "Unmarried" to "Single"
                 setLanguagesKnown('Hindi & English');
                 setDeclarationDate(new Date().toISOString().split('T')[0]);
-                setDeclarationPlace('Ghaziabad');
+                setDeclarationPlace('Ghaziabad'); // Placeholder
             } else {
                 // Load saved data for existing, complete profiles
                 setName(currentUserProfile.name || '');
@@ -211,7 +211,10 @@ const CVGeneratorView: React.FC<CVGeneratorViewProps> = ({ onCvComplete, current
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Form Section */}
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6 h-fit">
-                    <h3 className="text-lg font-semibold">Enter Your Details</h3>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold">Enter Your Details</h3>
+                        <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-1 rounded-full">Firebase</span>
+                    </div>
                     <Input id="name" label="Full Name" value={name} onChange={e => setName(e.target.value)} required />
                     <Input id="email" label="Email" value={email} onChange={e => setEmail(e.target.value)} required disabled />
                     <Input id="phone" label="Phone" value={phone} onChange={e => setPhone(e.target.value)} required />

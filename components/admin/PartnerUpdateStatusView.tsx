@@ -1,12 +1,12 @@
+
 import React, { useState, useMemo, FC } from 'react';
-import { PartnerUpdatableCandidate, PartnerUpdateStatus } from '../../types';
+import { PartnerUpdatableCandidate, PartnerUpdateStatus, UserProfile } from '../../types';
 import Input from '../Input';
 import Button from '../Button';
 import Modal from '../Modal';
 import StatCard from './StatCard';
-
-// MOCK DATA has been removed.
-const MOCK_UPDATABLE_CANDIDATES: PartnerUpdatableCandidate[] = [];
+import { getUserProfileByMobile } from '../../services/firebaseService';
+import CvPreviewModal from '../CvPreviewModal';
 
 const ALL_STATUSES: PartnerUpdateStatus[] = [
     'Pending', 'Contacted - Interested', 'Contacted - Not Interested', 'Interview Scheduled', 'Interview Attended', 'Offer Accepted', 'Offer Rejected', 'Joined', 'Absconded'
@@ -75,7 +75,7 @@ const UpdateStatusForm: FC<{
 };
 
 const PartnerUpdateStatusView: React.FC = () => {
-    const [candidates, setCandidates] = useState<PartnerUpdatableCandidate[]>(MOCK_UPDATABLE_CANDIDATES);
+    const [candidates, setCandidates] = useState<PartnerUpdatableCandidate[]>([]);
     const [filters, setFilters] = useState({
         search: '',
         client: '',
@@ -86,6 +86,8 @@ const PartnerUpdateStatusView: React.FC = () => {
         endDate: '',
     });
     const [selectedCandidate, setSelectedCandidate] = useState<PartnerUpdatableCandidate | null>(null);
+    const [viewingProfile, setViewingProfile] = useState<UserProfile | null>(null);
+    const [isCvLoading, setIsCvLoading] = useState(false);
 
     const summaryStats = useMemo(() => {
         const stats = {
@@ -135,6 +137,16 @@ const PartnerUpdateStatusView: React.FC = () => {
 
     const handleCloseModal = () => {
         setSelectedCandidate(null);
+    };
+
+    const handleViewCv = async (mobile: string) => {
+        setIsCvLoading(true);
+        try {
+            const profile = await getUserProfileByMobile(mobile);
+            if (profile) setViewingProfile(profile);
+            else alert("This candidate has not uploaded their CV details yet.");
+        } catch (err) { alert("Error fetching candidate CV."); }
+        finally { setIsCvLoading(false); }
     };
 
     const handleSaveStatus = (id: string, newStatus: PartnerUpdateStatus, remarks: string) => {
@@ -214,31 +226,6 @@ const PartnerUpdateStatusView: React.FC = () => {
                             {ALL_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
                         </select>
                     </div>
-                    <div>
-                        <label htmlFor="vendor" className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                        <select id="vendor" name="vendor" value={filters.vendor} onChange={handleFilterChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="">All</option>
-                            {uniqueVendors.map(vendor => <option key={vendor} value={vendor}>{vendor}</option>)}
-                        </select>
-                    </div>
-                    <Input
-                        id="startDate"
-                        name="startDate"
-                        label="Updated From"
-                        type="date"
-                        value={filters.startDate}
-                        onChange={handleFilterChange}
-                        wrapperClassName="mb-0"
-                    />
-                    <Input
-                        id="endDate"
-                        name="endDate"
-                        label="Updated To"
-                        type="date"
-                        value={filters.endDate}
-                        onChange={handleFilterChange}
-                        wrapperClassName="mb-0"
-                    />
                     <Button variant="secondary" onClick={clearFilters} className="w-full h-[42px]">
                         Clear Filters
                     </Button>
@@ -276,7 +263,8 @@ const PartnerUpdateStatusView: React.FC = () => {
                                             {candidate.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
+                                        <Button variant="small-light" size="sm" onClick={() => handleViewCv(candidate.phone)} loading={isCvLoading}>CV</Button>
                                         <Button variant="primary" size="sm" onClick={() => handleUpdateClick(candidate)}>Update</Button>
                                     </td>
                                 </tr>
@@ -305,6 +293,7 @@ const PartnerUpdateStatusView: React.FC = () => {
                    />
                 </Modal>
             )}
+            <CvPreviewModal isOpen={!!viewingProfile} onClose={() => setViewingProfile(null)} profile={viewingProfile} />
         </div>
     );
 };

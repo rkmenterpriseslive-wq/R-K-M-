@@ -67,22 +67,24 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ userType, onLoginSuccess, onLog
             
             const resolvedUserType = user.email === 'rkrohit19kumar@gmail.com' ? UserType.ADMIN : (userProfile.userType || UserType.NONE).toUpperCase() as UserType;
 
+            // Group roles by panel entry points
             const candidatePanelTypes = [UserType.CANDIDATE];
             const partnerPanelTypes = [UserType.PARTNER, UserType.STORE_SUPERVISOR];
             const teamPanelTypes = [UserType.TEAM, UserType.TEAMLEAD, UserType.HR, UserType.ADMIN];
-            const adminPanelTypes = [UserType.ADMIN];
 
             let isLoginAllowed = false;
 
+            // Authorization logic: User must use the correct entry button for their role
             if (userType === UserType.CANDIDATE && candidatePanelTypes.includes(resolvedUserType)) isLoginAllowed = true;
             else if (userType === UserType.PARTNER && partnerPanelTypes.includes(resolvedUserType)) isLoginAllowed = true;
             else if (userType === UserType.TEAM && teamPanelTypes.includes(resolvedUserType)) isLoginAllowed = true;
-            else if (userType === UserType.ADMIN && adminPanelTypes.includes(resolvedUserType)) isLoginAllowed = true;
+            else if (userType === UserType.ADMIN && resolvedUserType === UserType.ADMIN) isLoginAllowed = true;
 
-            
             if (!isLoginAllowed) {
                 await signOutUser();
-                const friendlyMessage = "Access Denied. You are not authorized to log in through this panel.";
+                const roleName = resolvedUserType.toLowerCase() === 'candidate' ? 'Employee' : resolvedUserType.toLowerCase();
+                const panelName = userType.toLowerCase() === 'candidate' ? 'Employee' : userType.toLowerCase();
+                const friendlyMessage = `Access Denied. You are registered as a ${roleName}. Please use the ${roleName} Login button instead of the ${panelName} panel.`;
                 setErrorMessage(friendlyMessage);
                 onLoginError(friendlyMessage);
                 return;

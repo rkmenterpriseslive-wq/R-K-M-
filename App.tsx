@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import Header from './components/Header';
 import LoginPanel from './components/LoginPanel';
 import Dashboard from './components/Dashboard';
@@ -6,8 +6,9 @@ import HomePage from './components/HomePage';
 import Modal from './components/Modal';
 import RequestDemoModal from './components/RequestDemoModal';
 import ApplyJobModal from './components/ApplyJobModal';
-import { UserType, Job, AdminMenuItem, CandidateMenuItem, AppUser, BrandingConfig, CandidatePipelineStats, VendorStats, ComplaintStats, PartnerRequirementStats, ProcessMetric, RoleMetric, TeamMemberPerformance, UserProfile } from './types';
-import { onJobsChange, createJob, deleteJob, updateJob, onAuthChange, signOutUser, seedDatabaseWithInitialData, getUserProfile, updateUserProfile } from './services/firebaseService';
+// Added missing Complaint import from types.ts
+import { UserType, Job, AdminMenuItem, CandidateMenuItem, AppUser, BrandingConfig, CandidatePipelineStats, VendorStats, Complaint, ComplaintStats, PartnerRequirementStats, ProcessMetric, RoleMetric, TeamMemberPerformance, UserProfile, DailyLineup, Candidate } from './types';
+import { onJobsChange, createJob, deleteJob, updateJob, onAuthChange, signOutUser, seedDatabaseWithInitialData, getUserProfile, updateUserProfile, onDailyLineupsChange, onCandidatesChange, getUsers, onComplaintsChange, onAllPartnerRequirementsChange } from './services/firebaseService';
 import { ref, set, getDatabase, onValue, Unsubscribe } from 'firebase/database';
 
 // --- App Component ---
@@ -21,46 +22,6 @@ interface DashboardStats {
   role: RoleMetric[];
   team: TeamMemberPerformance[];
 }
-
-const initialStats: DashboardStats = {
-  pipeline: { active: 8, interview: 0, rejected: 0, quit: 0 },
-  vendor: { total: 3 },
-  complaint: { active: 2, closed: 18 },
-  partnerRequirement: { total: 5, pending: 2, approved: 3 },
-  process: [
-    { name: 'Screening', count: 50, color: 'bg-blue-500' },
-    { name: 'Interview', count: 30, color: 'bg-indigo-500' },
-    { name: 'Selected', count: 25, color: 'bg-purple-500' },
-    { name: 'Joined', count: 20, color: 'bg-green-500' },
-  ],
-  role: [
-      { name: 'Picker', count: 60, color: 'bg-cyan-500' },
-      { name: 'Packer', count: 40, color: 'bg-teal-500' },
-      { name: 'Sales', count: 25, color: 'bg-emerald-500' },
-  ],
-  team: [
-    {
-      teamMember: 'Vikrant Singh',
-      role: 'Sr. Recruiter Manager',
-      total: 150,
-      selected: 90,
-      pending: 30,
-      rejected: 20,
-      quit: 10,
-      successRate: 60,
-    },
-    {
-      teamMember: 'Rohit Kumar',
-      role: 'Field Recruiter',
-      total: 80,
-      selected: 40,
-      pending: 15,
-      rejected: 15,
-      quit: 10,
-      successRate: 50,
-    }
-  ]
-};
 
 const BRANDING_STORAGE_KEY = 'rkm_branding_config';
 const LOGO_STORAGE_KEY = 'rkm_portal_logo';
@@ -93,9 +54,16 @@ const App: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [activeAdminMenuItem, setActiveAdminMenuItem] = useState<AdminMenuItem>(AdminMenuItem.Dashboard);
   const [activeCandidateMenuItem, setActiveCandidateMenuItem] = useState<CandidateMenuItem>(CandidateMenuItem.CVGenerator);
-  const [dashboardStats] = useState<DashboardStats>(initialStats);
   const [isCvComplete, setIsCvComplete] = useState(false);
   const [applyingForJob, setApplyingForJob] = useState<Job | null>(null);
+  const [isViewDashboard, setIsViewDashboard] = useState(false);
+
+  // Raw data for stats calculation
+  const [lineups, setLineups] = useState<DailyLineup[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [partnerReqs, setPartnerReqs] = useState<any[]>([]);
   
   const [branding, setBranding] = useState<BrandingConfig>(() => {
     try {
@@ -115,6 +83,72 @@ const App: React.FC = () => {
         return defaultLogo;
     }
   });
+
+  // Calculate Team Performance Metrics Dynamically
+  const teamPerformance: TeamMemberPerformance[] = useMemo(() => {
+    const teamUsers = allUsers.filter(u => 
+        [UserType.ADMIN, UserType.HR, UserType.TEAM, UserType.TEAMLEAD].includes(u.userType as UserType)
+    );
+
+    return teamUsers.map(user => {
+        const userName = user.name || 'Unknown';
+        const userLineups = lineups.filter(l => l.submittedBy === userName);
+        const userCandidates = candidates.filter(c => c.recruiter === userName);
+
+        const total = userLineups.length;
+        const selected = userCandidates.filter(c => c.status === 'Selected' || c.status === 'Hired').length;
+        const rejected = userCandidates.filter(c => c.status === 'Rejected').length;
+        const quit = userCandidates.filter(c => c.status === 'Quit').length;
+        const pending = Math.max(0, total - (selected + rejected + quit));
+        const successRate = total > 0 ? (selected / total) * 100 : 0;
+
+        return {
+            teamMember: userName,
+            role: user.userType === UserType.ADMIN ? 'Administrator' : user.userType,
+            total,
+            selected,
+            pending,
+            rejected,
+            quit,
+            successRate
+        };
+    }).sort((a, b) => b.total - a.total);
+  }, [allUsers, lineups, candidates]);
+
+  // Combined stats object
+  const dashboardStats: DashboardStats = useMemo(() => {
+    const activeCount = candidates.filter(c => c.status === 'Sourced' || c.status === 'Screening').length;
+    const interviewCount = candidates.filter(c => c.status === 'Interview').length;
+    const rejectedCount = candidates.filter(c => c.status === 'Rejected').length;
+    const quitCount = candidates.filter(c => c.status === 'Quit').length;
+
+    const activeComplaints = complaints.filter(c => c.status === 'Active').length;
+    const closedComplaints = complaints.filter(c => c.status === 'Closed').length;
+
+    const pendingReqs = partnerReqs.filter(r => r.submissionStatus === 'Pending Review').reduce((acc, r) => acc + (r.openings || 0), 0);
+    const approvedReqs = partnerReqs.filter(r => r.submissionStatus === 'Approved').reduce((acc, r) => acc + (r.openings || 0), 0);
+
+    return {
+        pipeline: { active: activeCount, interview: interviewCount, rejected: rejectedCount, quit: quitCount },
+        vendor: { total: [...new Set(lineups.map(l => l.vendor).filter(v => v !== 'Direct'))].length },
+        complaint: { active: activeComplaints, closed: closedComplaints },
+        partnerRequirement: { total: pendingReqs + approvedReqs, pending: pendingReqs, approved: approvedReqs },
+        process: [
+            { name: 'Sourced', count: candidates.filter(c => c.status === 'Sourced').length, color: 'bg-blue-400' },
+            { name: 'Screening', count: candidates.filter(c => c.status === 'Screening').length, color: 'bg-blue-500' },
+            { name: 'Interview', count: interviewCount, color: 'bg-indigo-500' },
+            { name: 'Offer Sent', count: candidates.filter(c => c.status === 'Offer Sent').length, color: 'bg-indigo-600' },
+            { name: 'Selected', count: candidates.filter(c => c.status === 'Selected').length, color: 'bg-purple-500' },
+            { name: 'Hired', count: candidates.filter(c => c.status === 'Hired').length, color: 'bg-green-500' },
+        ],
+        role: [
+            { name: 'Picker', count: candidates.filter(c => c.role?.toLowerCase().includes('picker')).length, color: 'bg-cyan-500' },
+            { name: 'Packer', count: candidates.filter(c => c.role?.toLowerCase().includes('packer')).length, color: 'bg-teal-500' },
+            { name: 'Rider', count: candidates.filter(c => c.role?.toLowerCase().includes('rider')).length, color: 'bg-emerald-500' },
+        ],
+        team: teamPerformance
+    };
+  }, [lineups, candidates, complaints, partnerReqs, teamPerformance]);
 
   const handleUpdateBranding = (newBranding: BrandingConfig) => {
     try {
@@ -140,10 +174,19 @@ const App: React.FC = () => {
     };
     initializeApp();
 
-    const unsubscribe = onJobsChange(setJobs);
+    const unsubJobs = onJobsChange(setJobs);
+    const unsubLineups = onDailyLineupsChange(setLineups);
+    const unsubCandidates = onCandidatesChange(setCandidates);
+    const unsubComplaints = onComplaintsChange(setComplaints);
+    const unsubReqs = onAllPartnerRequirementsChange(setPartnerReqs);
+    getUsers().then(setAllUsers);
 
     return () => {
-      unsubscribe();
+      unsubJobs();
+      unsubLineups();
+      unsubCandidates();
+      unsubComplaints();
+      unsubReqs();
     };
   }, []);
 
@@ -164,8 +207,8 @@ const App: React.FC = () => {
         try {
             await updateUserProfile(currentAppUser.uid, { ...cvData, isCvComplete: true });
             setIsCvComplete(true);
-            setActiveCandidateMenuItem(CandidateMenuItem.MyProfile);
-            alert('CV details saved! You can now access all features.');
+            setActiveCandidateMenuItem(CandidateMenuItem.JobBoard);
+            alert('CV details saved! You can now apply for jobs.');
         } catch (error) {
             console.error("Failed to save CV:", error);
             alert("There was an error saving your CV. Please try again.");
@@ -204,7 +247,8 @@ const App: React.FC = () => {
             localStorage.setItem(USER_SESSION_KEY, JSON.stringify(appUser));
             setCurrentAppUser(appUser);
             setCurrentUserType(appUser.userType);
-
+            
+            // Set initial dashboard states based on user type
             if ([UserType.ADMIN, UserType.HR, UserType.TEAMLEAD, UserType.TEAM].includes(appUser.userType)) {
               setActiveAdminMenuItem(AdminMenuItem.Dashboard);
             }
@@ -218,7 +262,7 @@ const App: React.FC = () => {
               const cvCompleted = userProfileData.isCvComplete || false;
               setIsCvComplete(cvCompleted);
               if (cvCompleted) {
-                  setActiveCandidateMenuItem(CandidateMenuItem.MyJobs);
+                  setActiveCandidateMenuItem(CandidateMenuItem.JobBoard);
               } else {
                   setActiveCandidateMenuItem(CandidateMenuItem.CVGenerator);
               }
@@ -232,6 +276,7 @@ const App: React.FC = () => {
         setCurrentUserProfile(null);
         setCurrentUserType(UserType.NONE);
         setIsCvComplete(false);
+        setIsViewDashboard(false);
       }
     });
 
@@ -242,7 +287,13 @@ const App: React.FC = () => {
   }, []);
   
   const handleLoginSuccess = () => {
+    const attemptedType = showLoginPanelForType;
     setShowLoginPanelForType(UserType.NONE);
+    if (attemptedType === UserType.CANDIDATE) {
+        setIsViewDashboard(false); 
+    } else {
+        setIsViewDashboard(true);
+    }
   };
 
   const handleLoginSelect = useCallback((type: UserType) => { setShowLoginPanelForType(type); setIsRegistering(false); }, []);
@@ -251,6 +302,7 @@ const App: React.FC = () => {
     try {
       await signOutUser();
       setActiveAdminMenuItem(AdminMenuItem.Dashboard);
+      setIsViewDashboard(false);
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -298,18 +350,24 @@ const App: React.FC = () => {
 
   const handleApplyNow = useCallback((job: Job) => {
     if (currentUserType === UserType.CANDIDATE) {
+        if (!isCvComplete) {
+            alert('Please complete your CV before applying for jobs.');
+            setIsViewDashboard(true);
+            setActiveCandidateMenuItem(CandidateMenuItem.CVGenerator);
+            return;
+        }
         setApplyingForJob(job);
     } else if (currentUserType === UserType.NONE) {
-        alert('Please log in or create an account to apply for jobs.');
+        alert('Please log in or create an account as an employee to apply for jobs.');
         handleLoginSelect(UserType.CANDIDATE);
     } else {
-        alert(`You are logged in as a ${currentUserType.toLowerCase()}. Please log in as a candidate to apply for jobs.`);
+        alert(`You are logged in as a ${currentUserType.toLowerCase()}. Please log in as an employee to apply for jobs.`);
     }
-  }, [currentUserType, handleLoginSelect]);
+  }, [currentUserType, isCvComplete, handleLoginSelect]);
 
   const getLoginTitle = (userType: UserType, isRegistering: boolean): string => {
     if (isRegistering) {
-      return `Register - ${userType}`;
+      return `Register - ${userType === UserType.CANDIDATE ? 'Employee' : userType}`;
     }
 
     switch (userType) {
@@ -318,7 +376,7 @@ const App: React.FC = () => {
       case UserType.PARTNER:
         return 'Partner Login';
       case UserType.CANDIDATE:
-        return 'Candidate Login';
+        return 'Employee Login';
       case UserType.ADMIN:
         return 'Admin Login';
       default:
@@ -334,15 +392,21 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         onHireUsClick={() => setShowRequestDemoModal(true)}
         logoSrc={logoSrc}
+        isShowingDashboard={isViewDashboard}
+        onHomeClick={() => setIsViewDashboard(false)}
+        onDashboardClick={() => setIsViewDashboard(true)}
       />
       <main>
-        {currentUserType === UserType.NONE ? (
+        {!isViewDashboard ? (
           <HomePage
             jobs={jobs}
             onApplyNow={handleApplyNow}
             currentUserType={currentUserType}
             onLoginSelect={handleLoginSelect}
-            onNavigateToAdminJobBoard={() => setActiveAdminMenuItem(AdminMenuItem.ManageJobBoard)}
+            onNavigateToAdminJobBoard={() => {
+                setIsViewDashboard(true);
+                setActiveAdminMenuItem(AdminMenuItem.ManageJobBoard);
+            }}
             branding={branding}
           />
         ) : (
@@ -371,7 +435,6 @@ const App: React.FC = () => {
             currentUser={currentAppUser}
             currentUserProfile={currentUserProfile}
             onApplyNow={handleApplyNow}
-            isCvComplete={isCvComplete}
             onCvCompletion={handleCvCompletion}
             onProfileUpdate={handleProfileUpdate}
           />
@@ -390,7 +453,7 @@ const App: React.FC = () => {
           isOpen={true}
           onClose={handleCancelLogin}
           title={getLoginTitle(showLoginPanelForType, isRegistering)}
-          description={showLoginPanelForType === UserType.TEAM ? 'Welcome Team Member. Please log in to access your dashboard.' : `Please log in as a ${showLoginPanelForType.toLowerCase()} to continue.`}
+          description={showLoginPanelForType === UserType.TEAM ? 'Welcome Team Member. Please log in to access your dashboard.' : `Please log in as an ${showLoginPanelForType === UserType.CANDIDATE ? 'employee' : showLoginPanelForType.toLowerCase()} to continue.`}
         >
           <LoginPanel
             userType={showLoginPanelForType}

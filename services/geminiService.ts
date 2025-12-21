@@ -1,15 +1,7 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
-// Ensure API_KEY is set in your environment variables for local development
-// In production, this would be handled by the hosting environment.
-const API_KEY = process.env.API_KEY || ''; 
-
-if (!API_KEY) {
-  console.warn("API_KEY is not set. Gemini API calls will fail.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// Fix: Always use process.env.API_KEY directly when initializing the GoogleGenAI client instance.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
  * Generates a job description using the Gemini API based on provided keywords.
@@ -17,10 +9,6 @@ const ai = new GoogleGenAI({ apiKey: API_KEY });
  * @returns A promise that resolves to the generated job description string.
  */
 export const generateJobDescription = async (keywords: string): Promise<string> => {
-  if (!API_KEY) {
-    throw new Error("Gemini API key is not configured.");
-  }
-
   try {
     const prompt = `Generate a detailed and professional job description for a position based on these keywords: "${keywords}". Include responsibilities, qualifications, and a brief company overview. Keep it concise, around 200 words.`;
 

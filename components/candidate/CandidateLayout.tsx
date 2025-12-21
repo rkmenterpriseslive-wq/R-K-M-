@@ -1,16 +1,14 @@
-
-
 import React from 'react';
 import CandidateSidebar from './CandidateSidebar';
 import { CandidateLayoutProps } from '../../types';
 
-const CandidateLayout: React.FC<CandidateLayoutProps> = ({ children, onLogout, activeCandidateMenuItem, onCandidateMenuItemClick, userType, isCvComplete }) => {
+const CandidateLayout: React.FC<CandidateLayoutProps> = ({ children, onLogout, activeCandidateMenuItem, onCandidateMenuItemClick, userType, onHomeClick }) => {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
       <CandidateSidebar 
         activeItem={activeCandidateMenuItem} 
         onItemClick={onCandidateMenuItemClick}
-        isCvComplete={isCvComplete}
+        onHomeClick={onHomeClick}
       />
       <div className="flex-1 flex flex-col">
         {/* Top Bar */}

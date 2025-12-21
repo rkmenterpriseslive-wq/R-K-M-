@@ -80,7 +80,8 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
                      <div>
                         <label htmlFor="vendors" className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
                         <select id="vendors" name="vendors" multiple value={formData.vendors} onChange={handleMultiSelectChange} className={`${selectStyles} h-24`}>
-                            {availableVendors.map(vendor => <option key={vendor} value={vendor}>{vendor}</option>)}
+                            {/* FIX: Explicitly cast `availableVendors` to `string[]` as its type is inferred as `any[]`. */}
+                            {(availableVendors as string[]).map(vendor => <option key={vendor} value={vendor}>{vendor}</option>)}
                         </select>
                     </div>
                 </div>
