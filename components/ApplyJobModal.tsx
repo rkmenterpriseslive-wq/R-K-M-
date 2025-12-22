@@ -1,3 +1,4 @@
+
 import React, { useState, FC, useMemo, useEffect } from 'react';
 import Modal from './Modal';
 import Button from './Button';
@@ -12,6 +13,7 @@ const LocationIcon: FC = () => <svg xmlns="http://www.w3.org/2000/svg" className
 const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job, currentUserProfile }) => {
     const [selectedRole, setSelectedRole] = useState('');
     const [selectedHr, setSelectedHr] = useState('');
+    const [selectedHrUid, setSelectedHrUid] = useState('');
     const [loading, setLoading] = useState(false);
     const [hrUsers, setHrUsers] = useState<UserProfile[]>([]);
     const [isFetchingHrs, setIsFetchingHrs] = useState(false);
@@ -20,12 +22,13 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job, currentUs
         if (isOpen) {
             setSelectedRole('');
             setSelectedHr('');
+            setSelectedHrUid('');
             
             const fetchHrs = async () => {
                 setIsFetchingHrs(true);
                 try {
                     const allUsers = await getUsers();
-                    const filteredHrs = allUsers.filter(u => u.userType === UserType.HR || u.userType === UserType.ADMIN);
+                    const filteredHrs = allUsers.filter(u => u.userType === UserType.HR || u.userType === UserType.ADMIN || u.userType === UserType.TEAM || u.userType === UserType.TEAMLEAD);
                     setHrUsers(filteredHrs);
                 } catch (error) {
                     console.error("Failed to fetch HR users:", error);
@@ -40,6 +43,17 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job, currentUs
     const availableRoles = useMemo(() => {
         return job ? job.title.split(/, | \/ /).map(role => role.trim()) : [];
     }, [job]);
+
+    const handleHrChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedName = e.target.value;
+        setSelectedHr(selectedName);
+        if (selectedName === 'Admin') {
+            setSelectedHrUid('Admin'); // Special case for Admin fallback
+        } else {
+            const user = filteredHrs.find(hr => hr.name === selectedName);
+            setSelectedHrUid(user ? user.uid : '');
+        }
+    };
 
     // Filter HRs based on job location and process (category)
     const filteredHrs = useMemo(() => {
@@ -73,7 +87,8 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job, currentUs
                 role: selectedRole,
                 location: job.jobCity,
                 storeName: job.storeName || job.locality,
-                submittedBy: selectedHr, // Assigns the application to the selected HR person
+                submittedBy: selectedHr, // Keep name for display
+                recruiterUid: selectedHrUid, // Pass UID for tracking
                 callStatus: 'Applied' as const,
                 // interviewDate/Time/Place will be updated by HR after confirmation
             };
@@ -126,7 +141,7 @@ const ApplyJobModal: FC<ApplyJobModalProps> = ({ isOpen, onClose, job, currentUs
                     <label htmlFor="selectHr" className="block text-sm font-medium text-gray-700 mb-1">
                         Select Your Assigned HR *
                     </label>
-                    <select id="selectHr" value={selectedHr} onChange={e => setSelectedHr(e.target.value)} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required disabled={isFetchingHrs}>
+                    <select id="selectHr" value={selectedHr} onChange={handleHrChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required disabled={isFetchingHrs}>
                         <option value="" disabled>{isFetchingHrs ? 'Loading HR List...' : 'Choose your HR contact'}</option>
                         {filteredHrs.length > 0 ? filteredHrs.map(hr => (
                             <option key={hr.uid} value={hr.name}>{hr.name} ({hr.userType})</option>

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import Input from '../Input';
 import Button from '../Button';
+import { UserProfile, Role, TeamMember } from '../../types';
 
 interface AddTeamMemberModalProps {
     isOpen: boolean;
@@ -9,10 +11,22 @@ interface AddTeamMemberModalProps {
     onSave: (memberData: any) => void;
     availableLocations: string[];
     availableVendors: string[];
+    potentialManagers: UserProfile[];
+    customRoles: Role[];
+    memberToEdit: TeamMember | null; // New prop for editing
 }
 
-const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose, onSave, availableLocations, availableVendors }) => {
-    const [formData, setFormData] = useState({
+const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    onSave, 
+    availableLocations, 
+    availableVendors,
+    potentialManagers,
+    customRoles,
+    memberToEdit
+}) => {
+    const initialFormData = {
         name: '',
         email: '',
         mobile: '',
@@ -21,7 +35,26 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
         reportingManager: '',
         workingLocations: [],
         vendors: [],
-    });
+    };
+    const [formData, setFormData] = useState<any>(initialFormData);
+    const isEditing = !!memberToEdit;
+
+    useEffect(() => {
+        if (isEditing) {
+            setFormData({
+                name: memberToEdit.name || '',
+                email: memberToEdit.email || '',
+                mobile: memberToEdit.mobile || '',
+                salary: memberToEdit.salary || '0',
+                role: memberToEdit.role || '',
+                reportingManager: memberToEdit.reportingManager || '',
+                workingLocations: memberToEdit.workingLocations || [],
+                vendors: memberToEdit.vendors || [],
+            });
+        } else {
+            setFormData(initialFormData);
+        }
+    }, [memberToEdit, isOpen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -39,36 +72,46 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
         setFormData(prev => ({ ...prev, [name]: value as any[] }));
     };
 
-    const handleSubmit = () => {
-        // Add validation here if needed
-        onSave(formData);
+    const handleSubmit = async () => {
+        if (!formData.name || !formData.email || !formData.role) {
+            alert("Please fill in the required fields.");
+            return;
+        }
+        await onSave(formData);
     };
     
     const selectStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white";
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Add Team Member" maxWidth="max-w-3xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Edit Team Member' : 'Add Team Member'} maxWidth="max-w-3xl">
             <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <Input id="name" name="name" label="Name" value={formData.name} onChange={handleChange} wrapperClassName="mb-0" />
-                    <Input id="email" name="email" label="Email" type="email" value={formData.email} onChange={handleChange} wrapperClassName="mb-0" />
+                    <Input id="name" name="name" label="Name *" value={formData.name} onChange={handleChange} wrapperClassName="mb-0" required />
+                    <Input id="email" name="email" label="Email *" type="email" value={formData.email} onChange={handleChange} wrapperClassName="mb-0" required disabled={isEditing} />
                     <Input id="mobile" name="mobile" label="Mobile Number" type="tel" value={formData.mobile} onChange={handleChange} wrapperClassName="mb-0" />
                     <Input id="salary" name="salary" label="Salary" type="number" value={formData.salary} onChange={handleChange} wrapperClassName="mb-0" />
                     <div>
-                        <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                        <select id="role" name="role" value={formData.role} onChange={handleChange} className={selectStyles}>
+                        <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                        <select id="role" name="role" value={formData.role} onChange={handleChange} className={selectStyles} required>
                             <option value="">Select Role</option>
-                            <option>Recruiter</option>
-                            <option>Team Lead</option>
-                            <option>HR Manager</option>
+                            {/* Priority Roles */}
+                            <option value="HR Manager">HR Manager</option>
+                            <option value="Team Lead">Team Lead</option>
+                            <option value="Recruiter">Recruiter</option>
+                            <option value="Account Manager">Account Manager</option>
+                            {/* Dynamically added roles from settings */}
+                            {customRoles.map(role => (
+                                <option key={role.id} value={role.name}>{role.name}</option>
+                            ))}
                         </select>
                     </div>
-                     <div className="md:col-span-2">
+                     <div className="md:col-span-1">
                         <label htmlFor="reportingManager" className="block text-sm font-medium text-gray-700 mb-1">Reporting Manager</label>
                         <select id="reportingManager" name="reportingManager" value={formData.reportingManager} onChange={handleChange} className={selectStyles}>
                             <option value="">Select Reporting Manager</option>
-                            <option>John Doe</option>
-                            <option>Jane Smith</option>
+                            {potentialManagers.map(manager => (
+                                <option key={manager.uid} value={manager.name}>{manager.name} ({manager.userType})</option>
+                            ))}
                         </select>
                     </div>
                      <div>
@@ -78,9 +121,8 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
                         </select>
                     </div>
                      <div>
-                        <label htmlFor="vendors" className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                        <label htmlFor="vendors" className="block text-sm font-medium text-gray-700 mb-1">Assign Vendor Process</label>
                         <select id="vendors" name="vendors" multiple value={formData.vendors} onChange={handleMultiSelectChange} className={`${selectStyles} h-24`}>
-                            {/* FIX: Explicitly cast `availableVendors` to `string[]` as its type is inferred as `any[]`. */}
                             {(availableVendors as string[]).map(vendor => <option key={vendor} value={vendor}>{vendor}</option>)}
                         </select>
                     </div>
@@ -88,7 +130,7 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ isOpen, onClose
 
                 <div className="flex justify-end gap-3 pt-6 border-t mt-6">
                     <Button type="button" variant="secondary" onClick={onClose} className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700">Cancel</Button>
-                    <Button type="button" variant="primary" onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700">Save Member</Button>
+                    <Button type="button" variant="primary" onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700">{isEditing ? 'Save Changes' : 'Save Member'}</Button>
                 </div>
             </div>
         </Modal>

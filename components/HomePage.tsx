@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 // Input component is no longer used for the search bar to allow custom styling
 import Button from './Button';
@@ -49,75 +50,81 @@ const HomePage: React.FC<HomePageProps> = ({ jobs, onApplyNow, currentUserType, 
         </div>
       </section>
 
-      {/* Search Bar Section */}
+      {/* Search Bar Section - Redesigned for unified Mobile/Desktop experience */}
       <section className="container mx-auto px-4 -mt-12 relative z-20">
-        <div className="bg-white shadow-xl max-w-4xl mx-auto rounded-lg overflow-hidden flex flex-col md:flex-row border border-gray-300">
-          {/* Search jobs by 'title' */}
-          <div className="flex-1 relative flex items-center p-4 md:p-0 md:pl-4 md:py-2 border-b md:border-b-0 md:border-r border-gray-200">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 text-gray-400 md:relative md:left-0 md:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <div className="bg-white shadow-2xl max-w-5xl mx-auto rounded-xl overflow-hidden border border-gray-200 flex flex-col md:flex-row items-stretch">
+          
+          {/* Search Job Title */}
+          <div className="flex-[1.5] relative flex items-center p-3 md:p-4 border-b md:border-b-0 md:border-r border-gray-100 group">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mr-3 flex-shrink-0 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text"
               id="searchTitle"
-              placeholder="Search jobs by 'title'"
+              placeholder="Search Job Title..."
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
-              className="w-full pl-8 md:pl-0 pr-2 py-2 text-sm focus:outline-none"
+              className="w-full py-1 text-sm md:text-base text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent"
               aria-label="Search jobs by title"
             />
           </div>
 
-          {/* Your Experience */}
-          <div className="flex-1 relative flex items-center p-4 md:p-0 md:pl-4 md:py-2 border-b md:border-b-0 md:border-r border-gray-200">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 text-gray-400 md:relative md:left-0 md:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.55 23.55 0 0112 15c-3.791 0-7.141-.676-9-1.745M19 19v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1m14-10a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V9a2 2 0 012-2h2zM9 9a2 2 0 012 2v2a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2h2z" />
-            </svg>
-            <select
-              id="searchExperience"
-              value={searchExperience}
-              onChange={(e) => setSearchExperience(e.target.value)}
-              className={`w-full pl-8 md:pl-0 pr-2 py-2 text-sm focus:outline-none bg-transparent appearance-none ${
-                searchExperience === '' ? 'text-gray-500 text-center' : 'text-gray-900 text-left'
-              }`}
-              aria-label="Your Experience"
-            >
-              <option value="">Your Experience</option>
-              <option value="Fresher" className="text-black">Fresher</option>
-              <option value="1-3 Years" className="text-black">1-3 Years</option>
-              <option value="3-5 Years" className="text-black">3-5 Years</option>
-              <option value="5+ Years" className="text-black">5+ Years</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+          {/* Compact Row for Experience and Location on Mobile */}
+          <div className="flex-1 flex border-b md:border-b-0 md:border-r border-gray-100">
+             {/* Experience Selector */}
+            <div className="flex-1 relative flex items-center p-3 md:p-4 border-r border-gray-100 md:border-r group">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0 hidden sm:block group-focus-within:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.55 23.55 0 0112 15c-3.791 0-7.141-.676-9-1.745M19 19v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1m14-10a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V9a2 2 0 012-2h2zM9 9a2 2 0 012 2v2a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2h2z" />
+              </svg>
+              <select
+                id="searchExperience"
+                value={searchExperience}
+                onChange={(e) => setSearchExperience(e.target.value)}
+                className={`w-full py-1 text-xs md:text-sm bg-transparent appearance-none focus:outline-none cursor-pointer ${
+                  searchExperience === '' ? 'text-gray-400' : 'text-gray-900 font-medium'
+                }`}
+                aria-label="Your Experience"
+              >
+                <option value="">Exp Level</option>
+                <option value="Fresher" className="text-black">Fresher</option>
+                <option value="1-3 Years" className="text-black">1-3 Years</option>
+                <option value="3-5 Years" className="text-black">3-5 Years</option>
+                <option value="5+ Years" className="text-black">5+ Years</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-gray-400">
+                <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+              </div>
+            </div>
+
+            {/* Location Input */}
+            <div className="flex-1 relative flex items-center p-3 md:p-4 group">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0 hidden sm:block group-focus-within:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <input
+                type="text"
+                id="searchLocation"
+                placeholder="City/Area"
+                value={searchLocation}
+                onChange={(e) => setSearchLocation(e.target.value)}
+                className="w-full py-1 text-xs md:text-sm text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent"
+                aria-label="Search location"
+              />
             </div>
           </div>
 
-          {/* Search for an area or city */}
-          <div className="flex-1 relative flex items-center p-4 md:p-0 md:pl-4 md:py-2 border-b md:border-b-0 md:border-r border-gray-200">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 text-gray-400 md:relative md:left-0 md:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <input
-              type="text"
-              id="searchLocation"
-              placeholder="Search for an area or city"
-              value={searchLocation}
-              onChange={(e) => setSearchLocation(e.target.value)}
-              className="w-full pl-8 md:pl-0 pr-2 py-2 text-sm focus:outline-none"
-              aria-label="Search for an area or city"
-            />
+          <div className="flex-shrink-0 flex items-center justify-center p-2 md:p-0">
+            <Button
+              variant="primary"
+              onClick={() => {}}
+              className="w-full md:w-32 lg:w-40 h-full bg-teal-500 hover:bg-teal-600 rounded-lg md:rounded-none transition-all font-bold uppercase tracking-wider text-xs md:text-sm"
+              size="lg"
+            >
+              Search
+            </Button>
           </div>
-
-          <Button
-            variant="primary"
-            onClick={() => {}}
-            className="w-full md:w-auto flex-shrink-0 bg-teal-500 hover:bg-teal-600 rounded-none md:rounded-r-lg"
-            size="md" // Ensure consistent height
-          >
-            Search jobs
-          </Button>
         </div>
       </section>
 

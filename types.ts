@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export enum UserType {
@@ -20,7 +21,6 @@ export interface Job {
   postedDate: string;
   adminId: string;
   experienceLevel: string;
-  salaryRange: string;
   numberOfOpenings: number;
   companyLogoSrc?: string;
 
@@ -37,6 +37,7 @@ export interface Job {
   interviewAddress: string;
   salaryType: string; // 'Fixed' or 'Fixed + Incentive'
   incentive?: string;
+  salaryRange: string; // Moved from basic fields to detailed
 }
 
 // CV-related interfaces
@@ -100,6 +101,7 @@ export interface UserProfile {
   // HR/Team specific fields for filtering
   workingLocations?: string[];
   vendors?: string[]; // Used for assigned job categories/processes
+  role?: string; // Specific role for team members (e.g., "Recruiter", "HR Manager")
 }
 
 // New Employee Interface
@@ -175,6 +177,16 @@ export interface PartnerRequirementStats {
   approved: number;
 }
 
+// New interface for HR Updates stats
+export interface HRUpdatesStats {
+  totalSelected: number;
+  totalOfferReleased: number;
+  onboardingPending: number;
+  newJoiningToday: number;
+  newJoiningWeek: number;
+  newJoiningMonth: number;
+}
+
 
 export interface ProcessMetric {
   name: string;
@@ -188,18 +200,69 @@ export interface RoleMetric {
   color: string;
 }
 
+// NEW INTERFACES FOR AGGREGATED JOB DATA
+export interface RoleWiseData {
+  role: string;
+  location: string; // Combined locations
+  store: string;    // Combined stores
+  brand: string;    // Combined brands
+  partner: string;  // Combined partners
+  totalOpenings: number;
+  pending: number;
+  approved: number;
+}
+
+export interface StoreWiseData {
+  storeName: string;
+  location: string; // Combined locations
+  role: string;     // Combined roles
+  brand: string;    // Combined brands
+  partner: string;  // Combined partners
+  totalOpenings: number;
+  pending: number;
+  approved: number;
+}
+
+export interface PartnerWiseData {
+  partnerName: string;
+  brand: string;    // Combined brands
+  location: string; // Combined locations
+  role: string;     // Combined roles
+  store: string;    // Combined stores
+  totalOpenings: number;
+  pending: number;
+  approved: number;
+}
+
+export interface TeamWiseData {
+  recruiterName: string;
+  role: string;
+  location: string;
+  store: string;
+  brand: string;
+  partner: string;
+  totalOpenings: number;
+  pending: number;
+  approved: number;
+}
+
+// NEW INTERFACE FOR TEAM PERFORMANCE
 export interface TeamMemberPerformance {
-  teamMember: string;
+  name: string;
   role: string;
   total: number;
   selected: number;
   pending: number;
   rejected: number;
   quit: number;
-  successRate: number; // Stored as a percentage (e.g., 75 for 75%)
+  successRate: number; // Percentage
+  reportingManagerName?: string; // NEW: To show who they report to
+  reportingManagerUserType?: UserType; // NEW: To differentiate managers
 }
 
+
 export interface TeamMember {
+  id?: string; // Added for Firebase
   name: string;
   email: string;
   mobile: string;
@@ -224,7 +287,7 @@ export enum AdminMenuItem {
   VendorDirectory = 'Vendor Directory',
   DemoRequests = 'Demo Requests',
   Revenue = 'Revenue',
-  Settings = 'Settings',
+    Settings = 'Settings',
   // New HR items
   ManagePayroll = 'Manage Payroll',
   GenerateOfferLetter = 'Generate Offer Letter',
@@ -239,7 +302,7 @@ export enum AdminMenuItem {
   PartnerRequirements = 'Partner Requirements',
   PartnerInvoices = 'Partner Invoices',
   PartnerHelpCenter = 'Partner Help Center',
-  PartnerSalaryUpdates = 'Salary Updates',
+  PartnerSalaryUpdates = 'Partner Salary Updates',
   PartnerRequirementsDetail = 'Partner Requirements Breakdown',
   // New Supervisor Items
   SupervisorDashboard = 'Supervisor Dashboard',
@@ -277,11 +340,16 @@ export interface Candidate {
   role: string;
   status: CandidateStatus;
   date: string; // Application/Sourced date
-  recruiter: string;
+  pipelineStartDate?: string; // The date the candidate should appear in the pipeline
+  recruiter: string; // Now stores UID of recruiter
   vendor?: string;
   storeName: string;
   quitDate?: string | null;
   documents?: CandidateDocument[];
+  activeStatus?: 'Active' | 'Inactive';
+  interviewDate?: string | null;
+  interviewTime?: string | null;
+  interviewPlace?: string | null;
 }
 
 
@@ -463,6 +531,7 @@ export interface BrandingConfig {
   portalName: string;
   hireTalent: BannerConfig;
   becomePartner: BannerConfig;
+  logoSrc?: string | null; // Added logoSrc to branding config
 }
 
 // NEW PANEL CONFIG TYPES
@@ -478,6 +547,7 @@ export interface PanelConfig {
   stores: Store[];
   emailNotifications?: boolean;
   maintenanceMode?: boolean;
+  permissions?: Record<string, Record<string, boolean>>;
 }
 
 export type CallStatus = 'Applied' | 'Interested' | 'Connected' | 'No Answer' | 'Not Interested' | 'Callback' | 'Already Call';
@@ -490,7 +560,8 @@ export interface DailyLineup {
     role: string;
     location: string;
     storeName: string;
-    submittedBy: string;
+    submittedBy: string; // Name of the person who submitted/assigned
+    recruiterUid?: string; // New: UID of the recruiter/HR for internal mapping
     callStatus: CallStatus;
     interviewDateTime?: string | null; // Old field for compatibility
     interviewDate?: string | null;
@@ -537,9 +608,15 @@ export interface DashboardProps { // Updated DashboardProps to match App.tsx and
   vendorStats: VendorStats;
   complaintStats: ComplaintStats;
   partnerRequirementStats: PartnerRequirementStats; // Added prop
+  hrUpdatesStats: HRUpdatesStats; // New prop for HR updates
   candidatesByProcess: ProcessMetric[];
   candidatesByRole: RoleMetric[];
-  teamPerformance: TeamMemberPerformance[];
+  roleWiseJobData: RoleWiseData[];
+  storeWiseJobData: StoreWiseData[];
+  partnerWiseJobData: PartnerWiseData[];
+  teamWiseJobData: TeamWiseData[];
+  teamPerformance: TeamMemberPerformance[]; // NEW
+  teamMembers: TeamMember[];
   activeAdminMenuItem: AdminMenuItem; // Pass active menu item to AdminLayout
   onAdminMenuItemClick: (item: AdminMenuItem) => void; // Pass handler to AdminLayout
   onLogout: () => void; // Added onLogout to prop interface
@@ -547,11 +624,14 @@ export interface DashboardProps { // Updated DashboardProps to match App.tsx and
   onUpdateBranding: (branding: BrandingConfig) => void; // Added branding update handler
   currentUser?: AppUser | null; // Added currentUser prop
   currentUserProfile?: UserProfile | null;
+  allUsers: UserProfile[]; // NEW: Pass allUsers
+  candidates: Candidate[];
   // New props for candidate
   activeCandidateMenuItem: CandidateMenuItem;
   onCandidateMenuItemClick: (item: CandidateMenuItem) => void;
   onApplyNow: (job: Job) => void;
   onCvCompletion: (cvData: Partial<UserProfile>) => void;
+  onTypeUpdate: (profileData: Partial<UserProfile>) => void;
   onProfileUpdate: (profileData: Partial<UserProfile>) => void;
 }
 
@@ -560,7 +640,6 @@ export interface AdminLayoutProps {
   userType: UserType; // Added userType to determine header title
   currentLogoSrc: string | null;
   onLogoUpload: (base64Image: string) => void;
-  onLogout: () => void;
   activeAdminMenuItem: AdminMenuItem; // New prop for active menu item
   onAdminMenuItemClick: (item: AdminMenuItem) => void; // New prop for menu item click handler
   onHomeClick?: () => void;
@@ -570,30 +649,39 @@ export interface SidebarProps {
   activeItem: AdminMenuItem; // Now controlled by parent
   onItemClick: (item: AdminMenuItem) => void; // New prop for click handler
   userType: UserType; // Added userType to filter menu items
+  isOpen?: boolean;
 }
 
 export interface AdminDashboardContentProps {
   pipelineStats: CandidatePipelineStats;
   vendorStats: VendorStats;
   complaintStats: ComplaintStats;
-  partnerRequirementStats: PartnerRequirementStats; // Added prop
+  partnerRequirementStats: PartnerRequirementStats;
+  hrUpdatesStats: HRUpdatesStats;
   candidatesByProcess: ProcessMetric[];
   candidatesByRole: RoleMetric[];
+  roleWiseJobData: RoleWiseData[];
+  storeWiseJobData: StoreWiseData[];
+  partnerWiseJobData: PartnerWiseData[];
+  teamWiseJobData: TeamWiseData[];
   teamPerformance: TeamMemberPerformance[];
+  teamMembers: TeamMember[];
   jobs: Job[];
   onAddJob: (job: Omit<Job, 'id' | 'postedDate' | 'adminId'>) => void;
   onUpdateJob: (job: Job) => void;
   onDeleteJob: (id: string) => void;
   currentLogoSrc: string | null;
   onLogoUpload: (base64Image: string) => void;
-  activeAdminMenuItem: AdminMenuItem; // New prop for conditional rendering
-  onAdminMenuItemClick: (item: AdminMenuItem) => void; // Added handler
-  userType: UserType; // Added userType for section filtering
-  branding: BrandingConfig; // Added branding config
-  onUpdateBranding: (branding: BrandingConfig) => void; // Added branding update handler
-  currentUser?: AppUser | null; // Added currentUser prop
+  activeAdminMenuItem: AdminMenuItem;
+  onAdminMenuItemClick: (item: AdminMenuItem) => void;
+  userType: UserType;
+  branding: BrandingConfig;
+  onUpdateBranding: (branding: BrandingConfig) => void;
+  currentUser?: AppUser | null;
   // FIX: Add currentUserProfile to pass detailed user data for components like MyProfileView.
   currentUserProfile?: UserProfile | null;
+  allUsers: UserProfile[];
+  candidates: Candidate[];
 }
 
 export interface LoginPanelProps {
@@ -601,6 +689,9 @@ export interface LoginPanelProps {
   onLoginSuccess: () => void; // Callback on successful login
   onLoginError: (message: string) => void; // Callback on login error
   initialIsSignUp?: boolean; // New prop to force signup mode initially
+  // FIX: Add UserProfile and FirebaseUser types for LoginPanel
+  // userProfile?: UserProfile | null;
+  // firebaseUser?: FirebaseUser | null;
 }
 
 // FIX: Add missing ApplyJobModalProps interface
@@ -616,7 +707,6 @@ export interface ApplyJobModalProps {
 export interface CandidateLayoutProps {
   children: React.ReactNode;
   userType: UserType;
-  onLogout: () => void;
   activeCandidateMenuItem: CandidateMenuItem;
   onCandidateMenuItemClick: (item: CandidateMenuItem) => void;
   onHomeClick?: () => void;
@@ -626,6 +716,7 @@ export interface CandidateSidebarProps {
   activeItem: CandidateMenuItem;
   onItemClick: (item: CandidateMenuItem) => void;
   onHomeClick?: () => void;
+  isOpen?: boolean;
 }
 
 export interface CandidateDashboardContentProps {
@@ -652,7 +743,8 @@ export interface Resignation {
 // New Ticket Interface for Help Center
 export interface Ticket {
   id: string;
-  submittedBy: string; // Name of the user
+  userId: string; // UID of the user who submitted the ticket
+  submittedBy: string; // Name or email of the user
   userType: UserType; // Type of user (Candidate, Partner)
   subject: string;
   category: 'Payroll' | 'Attendance' | 'Documents' | 'General Inquiry' | 'Invoice Query' | 'Technical Issue' | 'Other';
@@ -661,4 +753,67 @@ export interface Ticket {
   submittedDate: string; // ISO string
   resolvedDate?: string; // ISO string
   hrRemarks?: string;
+  
+  // SLA & Escalation metadata
+  assignedToName: string; // Name of current handler (HR, Manager, or Admin)
+  slaDeadline: string; // ISO string for resolution deadline
+  escalationLevel: 0 | 1 | 2; // 0: HR, 1: Manager, 2: Admin
+}
+
+// New Role Interface for Settings
+export interface Role {
+  id: string;
+  name: string;
+  panel: 'Admin' | 'HR' | 'Team' | 'Partner' | 'Candidate' | 'TeamLead';
+}
+
+// NEW COMMISSION STRUCTURE INTERFACES
+export type CommissionStructureType = 'Percentage Based' | 'Slab Based' | 'Attendance Based';
+
+export interface PercentageCommission {
+  type: 'Percentage Based';
+  percentage: number; // e.g., 10 for 10%
+}
+
+export interface Slab {
+  id: string; // For React list keys
+  from: number; // e.g., 1
+  to: number;   // e.g., 10 (number of candidates, days, etc.)
+  amount: number; // Flat amount for this slab
+}
+
+export interface SlabCommission {
+  type: 'Slab Based';
+  slabs: Slab[];
+}
+
+export interface AttendanceProfile {
+  id: string; // For React list keys
+  role: string; // e.g., "Picker", "Packer", "Sales Executive"
+  experienceType: string; // NEW: "Fresher", "1-3 Years" etc.
+  attendanceDays: number; // e.g., 26 for 26 days present
+  amount: number; // Flat amount for achieving this profile's attendance
+}
+
+export interface AttendanceCommission {
+  type: 'Attendance Based';
+  profiles: AttendanceProfile[];
+}
+
+export type CommissionStructure = PercentageCommission | SlabCommission | AttendanceCommission;
+
+// Updated Vendor interface
+export interface Vendor {
+    id: string;
+    partnerName: string;
+    brandName: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+    fullAddress: string; // New field
+    operationalLocations: string[]; // Renamed from 'locations'
+    jobRoles: string[]; // Renamed from 'roles'
+    status: 'Active' | 'Inactive';
+    commissionStructure?: CommissionStructure; // Made optional for backward compatibility
+    termsAndConditions: string; // New field
 }

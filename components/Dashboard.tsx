@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Job,
@@ -7,11 +8,17 @@ import {
   ComplaintStats,
   ProcessMetric,
   RoleMetric,
-  TeamMemberPerformance,
   AdminMenuItem,
   DashboardProps,
   CandidateMenuItem,
-  PartnerRequirementStats
+  PartnerRequirementStats,
+  HRUpdatesStats,
+  RoleWiseData,
+  StoreWiseData,
+  PartnerWiseData,
+  TeamWiseData,
+  TeamMemberPerformance,
+  UserProfile
 } from '../types';
 import AdminLayout from './admin/AdminLayout';
 import AdminDashboardContent from './admin/AdminDashboardContent';
@@ -31,9 +38,15 @@ const Dashboard: React.FC<DashboardProps & { onHomeClick?: () => void }> = ({
   vendorStats,
   complaintStats,
   partnerRequirementStats,
+  hrUpdatesStats, // Added
   candidatesByProcess,
   candidatesByRole,
-  teamPerformance,
+  roleWiseJobData, // Added
+  storeWiseJobData, // Added
+  partnerWiseJobData, // Added
+  teamWiseJobData, // Added
+  teamPerformance, // Added
+  teamMembers,
   activeAdminMenuItem,
   onAdminMenuItemClick,
   activeCandidateMenuItem,
@@ -43,6 +56,8 @@ const Dashboard: React.FC<DashboardProps & { onHomeClick?: () => void }> = ({
   onUpdateBranding,
   currentUser,
   currentUserProfile,
+  allUsers, // NEW: allUsers prop
+  candidates,
   onApplyNow,
   onCvCompletion,
   onProfileUpdate,
@@ -61,7 +76,6 @@ const Dashboard: React.FC<DashboardProps & { onHomeClick?: () => void }> = ({
             userType={userType}
             currentLogoSrc={currentLogoSrc}
             onLogoUpload={onLogoUpload}
-            onLogout={onLogout}
             activeAdminMenuItem={activeAdminMenuItem}
             onAdminMenuItemClick={onAdminMenuItemClick}
             onHomeClick={onHomeClick}
@@ -71,9 +85,15 @@ const Dashboard: React.FC<DashboardProps & { onHomeClick?: () => void }> = ({
               vendorStats={vendorStats}
               complaintStats={complaintStats}
               partnerRequirementStats={partnerRequirementStats}
+              hrUpdatesStats={hrUpdatesStats} // Passed
               candidatesByProcess={candidatesByProcess}
               candidatesByRole={candidatesByRole}
-              teamPerformance={teamPerformance}
+              roleWiseJobData={roleWiseJobData} // Passed
+              storeWiseJobData={storeWiseJobData} // Passed
+              partnerWiseJobData={partnerWiseJobData} // Passed
+              teamWiseJobData={teamWiseJobData} // Passed
+              teamPerformance={teamPerformance} // Passed
+              teamMembers={teamMembers}
               jobs={jobs}
               onAddJob={onAddJob}
               onUpdateJob={onUpdateJob}
@@ -88,6 +108,8 @@ const Dashboard: React.FC<DashboardProps & { onHomeClick?: () => void }> = ({
               currentUser={currentUser}
               // FIX: Pass currentUserProfile to AdminDashboardContent.
               currentUserProfile={currentUserProfile}
+              allUsers={allUsers} // NEW: Pass allUsers
+              candidates={candidates}
             />
           </AdminLayout>
         );
@@ -95,7 +117,6 @@ const Dashboard: React.FC<DashboardProps & { onHomeClick?: () => void }> = ({
         return (
           <CandidateLayout
             userType={userType}
-            onLogout={onLogout}
             activeCandidateMenuItem={activeCandidateMenuItem}
             onCandidateMenuItemClick={onCandidateMenuItemClick}
             onHomeClick={onHomeClick}

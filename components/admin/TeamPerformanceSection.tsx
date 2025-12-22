@@ -1,13 +1,13 @@
 
-import React from 'react';
-import { TeamMemberPerformance, UserType, UserProfile } from '../../types';
 
-interface TeamPerformanceTableProps {
+import React from 'react';
+import { TeamMemberPerformance, UserType } from '../../types';
+
+interface TeamPerformanceSectionProps {
   data: TeamMemberPerformance[];
-  currentUserProfile?: UserProfile | null;
 }
 
-const TeamPerformanceTable: React.FC<TeamPerformanceTableProps> = ({ data, currentUserProfile }) => {
+const TeamPerformanceSection: React.FC<TeamPerformanceSectionProps> = ({ data }) => {
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-black text-[#1e293b] tracking-tight mb-4">Team Performance</h3>
@@ -18,7 +18,7 @@ const TeamPerformanceTable: React.FC<TeamPerformanceTableProps> = ({ data, curre
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Team Member</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Reporting Manager</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Reporting Manager</th> {/* NEW COLUMN */}
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Total</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Selected</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Pending</th>
@@ -28,10 +28,8 @@ const TeamPerformanceTable: React.FC<TeamPerformanceTableProps> = ({ data, curre
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.length > 0 ? data.map((member, index) => {
-                const isCurrentUser = member.name === currentUserProfile?.name;
-                return (
-                <tr key={index} className={`hover:bg-gray-50 transition-colors ${isCurrentUser ? 'bg-blue-50/70' : ''}`}>
+              {data.length > 0 ? data.map((member, index) => (
+                <tr key={index} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{member.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{member.role}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -55,8 +53,7 @@ const TeamPerformanceTable: React.FC<TeamPerformanceTableProps> = ({ data, curre
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-600">{member.quit}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-indigo-600">{member.successRate}%</td>
                 </tr>
-                );
-              }) : (
+              )) : (
                 <tr>
                   <td colSpan={9} className="px-6 py-10 text-center text-gray-500">
                     No team performance data available.
@@ -71,4 +68,4 @@ const TeamPerformanceTable: React.FC<TeamPerformanceTableProps> = ({ data, curre
   );
 };
 
-export default TeamPerformanceTable;
+export default TeamPerformanceSection;

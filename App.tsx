@@ -1,14 +1,16 @@
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import Header from './components/Header';
-import LoginPanel from './components/LoginPanel';
+// Fix: Changed LoginPanel import from default to named export
+import { LoginPanel } from './components/LoginPanel';
 import Dashboard from './components/Dashboard';
 import HomePage from './components/HomePage';
 import Modal from './components/Modal';
 import RequestDemoModal from './components/RequestDemoModal';
 import ApplyJobModal from './components/ApplyJobModal';
 // Added missing Complaint import from types.ts
-import { UserType, Job, AdminMenuItem, CandidateMenuItem, AppUser, BrandingConfig, CandidatePipelineStats, VendorStats, Complaint, ComplaintStats, PartnerRequirementStats, ProcessMetric, RoleMetric, TeamMemberPerformance, UserProfile, DailyLineup, Candidate } from './types';
-import { onJobsChange, createJob, deleteJob, updateJob, onAuthChange, signOutUser, seedDatabaseWithInitialData, getUserProfile, updateUserProfile, onDailyLineupsChange, onCandidatesChange, getUsers, onComplaintsChange, onAllPartnerRequirementsChange } from './services/firebaseService';
+import { UserType, Job, AdminMenuItem, CandidateMenuItem, AppUser, BrandingConfig, CandidatePipelineStats, VendorStats, Complaint, ComplaintStats, PartnerRequirementStats, ProcessMetric, RoleMetric, UserProfile, DailyLineup, Candidate, HRUpdatesStats, RoleWiseData, StoreWiseData, PartnerWiseData, TeamWiseData, TeamMemberPerformance, TeamMember } from './types';
+import { onJobsChange, createJob, deleteJob, updateJob, onAuthChange, signOutUser, seedDatabaseWithInitialData, getUserProfile, updateUserProfile, onDailyLineupsChange, onCandidatesChange, onUsersChange, onComplaintsChange, onAllPartnerRequirementsChange, onTeamMembersChange, onBrandingConfigChange, updateBrandingConfig, updateLogoSrc } from './services/firebaseService';
 import { ref, set, getDatabase, onValue, Unsubscribe } from 'firebase/database';
 
 // --- App Component ---
@@ -18,16 +20,18 @@ interface DashboardStats {
   vendor: VendorStats;
   complaint: ComplaintStats;
   partnerRequirement: PartnerRequirementStats;
+  hrUpdates: HRUpdatesStats; // Added HR Updates Stats
   process: ProcessMetric[];
   role: RoleMetric[];
-  team: TeamMemberPerformance[];
+  // NEW: Add aggregated job data
+  roleWiseJobData: RoleWiseData[];
+  storeWiseJobData: StoreWiseData[];
+  partnerWiseJobData: PartnerWiseData[];
+  teamWiseJobData: TeamWiseData[];
+  teamPerformance: TeamMemberPerformance[]; // NEW
 }
 
-const BRANDING_STORAGE_KEY = 'rkm_branding_config';
-const LOGO_STORAGE_KEY = 'rkm_portal_logo';
-const USER_SESSION_KEY = 'rkm_user';
-const defaultLogo = 'https://rkm-pro-502a5.web.app/images/rkm.png';
-
+// Moved default branding config here, will be used for initial seed if Firebase is empty.
 const defaultBranding: BrandingConfig = {
   portalName: 'R.K.M ENTERPRISE',
   hireTalent: {
@@ -43,6 +47,9 @@ const defaultBranding: BrandingConfig = {
       backgroundImage: 'https://rkm-pro-502a5.web.app/images/partner.png',
   }
 };
+const defaultLogo = 'https://rkm-pro-502a5.web.app/images/rkm.png';
+
+const USER_SESSION_KEY = 'rkm_user';
 
 const App: React.FC = () => {
   const [currentUserType, setCurrentUserType] = useState<UserType>(UserType.NONE);
@@ -61,59 +68,313 @@ const App: React.FC = () => {
   // Raw data for stats calculation
   const [lineups, setLineups] = useState<DailyLineup[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]); // Centralized allUsers state
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]); // New: Team Members state
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [partnerReqs, setPartnerReqs] = useState<any[]>([]);
   
-  const [branding, setBranding] = useState<BrandingConfig>(() => {
-    try {
-        const savedBranding = localStorage.getItem(BRANDING_STORAGE_KEY);
-        return savedBranding ? JSON.parse(savedBranding) : defaultBranding;
-    } catch (error) {
-        console.error("Could not parse branding from localStorage", error);
-        return defaultBranding;
-    }
-  });
+  // Branding state now initialized to defaults, will be overwritten by Firebase listener
+  const [branding, setBranding] = useState<BrandingConfig>(defaultBranding);
+  const [logoSrc, setLogoSrc] = useState<string | null>(defaultLogo);
 
-  const [logoSrc, setLogoSrc] = useState<string | null>(() => {
-    try {
-        return localStorage.getItem(LOGO_STORAGE_KEY) || defaultLogo;
-    } catch (error) {
-        console.error("Could not read logo from localStorage", error);
-        return defaultLogo;
-    }
-  });
 
-  // Calculate Team Performance Metrics Dynamically
+    interface AggregatedDataIntermediateBase {
+      location: Set<string>;
+      store: Set<string>;
+      brand: Set<string>;
+      partner: Set<string>;
+      totalOpenings: number;
+      pending: number;
+      approved: number;
+    }
+
+    interface RoleWiseDataIntermediate extends AggregatedDataIntermediateBase {
+        role: string;
+    }
+
+    interface StoreWiseDataIntermediate extends AggregatedDataIntermediateBase {
+        storeName: string;
+        role: Set<string>;
+    }
+
+    interface PartnerWiseDataIntermediate extends AggregatedDataIntermediateBase {
+        partnerName: string;
+        role: Set<string>;
+    }
+
+    interface TeamWiseDataIntermediate extends AggregatedDataIntermediateBase {
+        recruiterName: string;
+        role: Set<string>;
+    }
+
+    const roleWiseJobData: RoleWiseData[] = useMemo(() => {
+        const aggregated: { [key: string]: RoleWiseDataIntermediate } = {};
+        jobs.forEach(job => {
+            const key = job.title;
+            if (!aggregated[key]) {
+                aggregated[key] = {
+                    role: job.title,
+                    location: new Set<string>(),
+                    store: new Set<string>(),
+                    brand: new Set<string>(),
+                    partner: new Set<string>(),
+                    totalOpenings: 0,
+                    pending: 0, 
+                    approved: 0,
+                };
+            }
+            aggregated[key].totalOpenings += job.numberOfOpenings;
+            aggregated[key].location.add(job.jobCity);
+            aggregated[key].store.add(job.storeName || job.locality);
+            aggregated[key].brand.add(job.jobCategory);
+            aggregated[key].partner.add(job.company);
+        });
+        const result: RoleWiseData[] = Object.values(aggregated).map(item => ({
+            role: item.role,
+            location: Array.from(item.location).join(', '),
+            store: Array.from(item.store).join(', '),
+            brand: Array.from(item.brand).join(', '),
+            partner: Array.from(item.partner).join(', '),
+            totalOpenings: item.totalOpenings,
+            pending: item.pending,
+            approved: item.approved,
+        }));
+        if (result.length === 0) {
+            return [{ role: 'Picker & Packer-0', location: 'Unknown City-0', store: 'Mayur Vihar-0', brand: 'Venus Food', partner: 'N/A-0', totalOpenings: 0, pending: 0, approved: 0 }];
+        }
+        return result;
+    }, [jobs]);
+
+    const storeWiseJobData: StoreWiseData[] = useMemo(() => {
+        const aggregated: { [key: string]: StoreWiseDataIntermediate } = {};
+        jobs.forEach(job => {
+            const key = job.storeName || job.locality;
+            if (!aggregated[key]) {
+                aggregated[key] = {
+                    storeName: key,
+                    location: new Set<string>(),
+                    store: new Set<string>().add(key),
+                    role: new Set<string>(),
+                    brand: new Set<string>(),
+                    partner: new Set<string>(),
+                    totalOpenings: 0,
+                    pending: 0,
+                    approved: 0,
+                };
+            }
+            aggregated[key].totalOpenings += job.numberOfOpenings;
+            aggregated[key].location.add(job.jobCity);
+            aggregated[key].role.add(job.title);
+            aggregated[key].brand.add(job.jobCategory);
+            aggregated[key].partner.add(job.company);
+        });
+        const result: StoreWiseData[] = Object.values(aggregated).map(item => ({
+            storeName: item.storeName,
+            location: Array.from(item.location).join(', '),
+            role: Array.from(item.role).join(', '),
+            brand: Array.from(item.brand).join(', '),
+            partner: Array.from(item.partner).join(', '),
+            totalOpenings: item.totalOpenings,
+            pending: item.pending,
+            approved: item.approved,
+        }));
+        if (result.length === 0) {
+            return [{ storeName: 'Mayur Vihar-0', location: 'Unknown City-0', role: 'Picker & Packer-0', brand: 'Venus Food', partner: 'N/A-0', totalOpenings: 0, pending: 0, approved: 0 }];
+        }
+        return result;
+    }, [jobs]);
+
+    const partnerWiseJobData: PartnerWiseData[] = useMemo(() => {
+        const aggregated: { [key: string]: PartnerWiseDataIntermediate } = {};
+        jobs.forEach(job => {
+            const key = job.company;
+            if (!aggregated[key]) {
+                aggregated[key] = {
+                    partnerName: key,
+                    brand: new Set<string>(),
+                    location: new Set<string>(),
+                    role: new Set<string>(),
+                    store: new Set<string>(),
+                    partner: new Set<string>().add(key),
+                    totalOpenings: 0,
+                    pending: 0, 
+                    approved: 0, 
+                };
+            }
+            aggregated[key].totalOpenings += job.numberOfOpenings;
+            aggregated[key].brand.add(job.jobCategory);
+            aggregated[key].location.add(job.jobCity);
+            aggregated[key].role.add(job.title);
+            aggregated[key].store.add(job.storeName || job.locality);
+        });
+        const result: PartnerWiseData[] = Object.values(aggregated).map(item => ({
+            partnerName: item.partnerName,
+            brand: Array.from(item.brand).join(', '),
+            location: Array.from(item.location).join(', '),
+            role: Array.from(item.role).join(', '),
+            store: Array.from(item.store).join(', '),
+            totalOpenings: item.totalOpenings,
+            pending: item.pending,
+            approved: item.approved,
+        }));
+         if (result.length === 0) {
+            return [{ partnerName: 'N/A-0', brand: 'Venus Food', location: 'Unknown City-0', role: 'Picker & Packer-0', store: 'Mayur Vihar-0', totalOpenings: 0, pending: 0, approved: 0 }];
+        }
+        return result;
+    }, [jobs]);
+
+    const teamWiseJobData: TeamWiseData[] = useMemo(() => {
+        const aggregated: { [key: string]: TeamWiseDataIntermediate } = {}; // Key by recruiter UID
+        
+        const relevantRecruitersMap = new Map<string, { userProfile: UserProfile, teamMember?: TeamMember }>();
+        allUsers.filter(user => [UserType.TEAM, UserType.TEAMLEAD].includes(user.userType))
+            .forEach(user => {
+                const teamMemberRecord = teamMembers.find(tm => tm.email === user.email);
+                relevantRecruitersMap.set(user.uid, { userProfile: user, teamMember: teamMemberRecord });
+            });
+
+        jobs.forEach(job => {
+            const recruiterId = job.adminId;
+            const recruiterInfo = relevantRecruitersMap.get(recruiterId);
+
+            if (recruiterInfo) {
+                const { userProfile, teamMember } = recruiterInfo;
+
+                const matchesLocation = !teamMember?.workingLocations || teamMember.workingLocations.length === 0 || teamMember.workingLocations.includes(job.jobCity);
+                const matchesVendor = !teamMember?.vendors || teamMember.vendors.length === 0 || teamMember.vendors.includes(job.jobCategory);
+
+                if (!matchesLocation || !matchesVendor) {
+                    return; 
+                }
+
+                const recruiterName = userProfile.name || `Team Member (${userProfile.uid.slice(0, 4)}...)`;
+                
+                if (!aggregated[recruiterId]) {
+                    aggregated[recruiterId] = {
+                        recruiterName: recruiterName,
+                        location: new Set<string>(),
+                        store: new Set<string>(),
+                        brand: new Set<string>(),
+                        partner: new Set<string>(),
+                        role: new Set<string>(),
+                        totalOpenings: 0,
+                        pending: 0, 
+                        approved: 0, 
+                    };
+                }
+                aggregated[recruiterId].totalOpenings += job.numberOfOpenings;
+                aggregated[recruiterId].location.add(job.jobCity);
+                aggregated[recruiterId].store.add(job.storeName || job.locality);
+                aggregated[recruiterId].brand.add(job.jobCategory);
+                aggregated[recruiterId].partner.add(job.company);
+                aggregated[recruiterId].role.add(job.title);
+            }
+        });
+        const result: TeamWiseData[] = Object.values(aggregated).map(item => ({
+            recruiterName: item.recruiterName,
+            location: Array.from(item.location).join(', '),
+            store: Array.from(item.store).join(', '),
+            brand: Array.from(item.brand).join(', '),
+            partner: Array.from(item.partner).join(', '),
+            role: Array.from(item.role).join(', '),
+            totalOpenings: item.totalOpenings,
+            pending: item.pending,
+            approved: item.approved,
+        }));
+        if (result.length === 0) {
+            return [{ recruiterName: 'Recruiter-0', role: 'Picker & Packer-0', location: 'Unknown City-0', store: 'Mayur Vihar-0', brand: 'Venus Food', partner: 'N/A-0', totalOpenings: 0, pending: 0, approved: 0 }];
+        }
+        return result;
+    }, [jobs, allUsers, teamMembers]);
+
   const teamPerformance: TeamMemberPerformance[] = useMemo(() => {
-    const teamUsers = allUsers.filter(u => 
-        [UserType.ADMIN, UserType.HR, UserType.TEAM, UserType.TEAMLEAD].includes(u.userType as UserType)
-    );
+      // Key the performance map by recruiter UID for uniqueness and reliable lookup
+      const performanceMap: { [recruiterUid: string]: Omit<TeamMemberPerformance, 'name' | 'role'> & { userProfile: UserProfile; teamMember?: TeamMember; } } = {};
 
-    return teamUsers.map(user => {
-        const userName = user.name || 'Unknown';
-        const userLineups = lineups.filter(l => l.submittedBy === userName);
-        const userCandidates = candidates.filter(c => c.recruiter === userName);
+      // 1. Initialize map with ONLY TeamLead and Team users
+      // This explicitly filters out Admins/HRs from the primary display of this report
+      const relevantUsers = allUsers.filter(user => 
+          [UserType.TEAMLEAD, UserType.TEAM].includes(user.userType)
+      );
 
-        const total = userLineups.length;
-        const selected = userCandidates.filter(c => c.status === 'Selected' || c.status === 'Hired').length;
-        const rejected = userCandidates.filter(c => c.status === 'Rejected').length;
-        const quit = userCandidates.filter(c => c.status === 'Quit').length;
-        const pending = Math.max(0, total - (selected + rejected + quit));
-        const successRate = total > 0 ? (selected / total) * 100 : 0;
+      relevantUsers.forEach(user => {
+          const teamMemberRecord = teamMembers.find(tm => tm.email === user.email);
+          const reportingManagerName = teamMemberRecord?.reportingManager || 'N/A';
+          const managerUserProfile = allUsers.find(u => u.name === reportingManagerName); // Lookup manager's user profile by name
+          
+          performanceMap[user.uid] = {
+              userProfile: user,
+              teamMember: teamMemberRecord,
+              total: 0,
+              selected: 0,
+              pending: 0,
+              rejected: 0,
+              quit: 0,
+              successRate: 0,
+              reportingManagerName: reportingManagerName,
+              reportingManagerUserType: managerUserProfile?.userType || UserType.NONE, // Default to NONE if not found
+          };
+      });
 
-        return {
-            teamMember: userName,
-            role: user.userType === UserType.ADMIN ? 'Administrator' : user.userType,
-            total,
-            selected,
-            pending,
-            rejected,
-            quit,
-            successRate
-        };
-    }).sort((a, b) => b.total - a.total);
-  }, [allUsers, lineups, candidates]);
+      // 2. Aggregate candidate data based on recruiterUid
+      candidates.forEach(candidate => {
+          const recruiterUid = candidate.recruiter;
+          
+          // Only count candidates if their recruiter is present in our filtered performanceMap
+          // This excludes candidates sourced by Admin/HR if they are not also Team/TeamLead users
+          if (recruiterUid && performanceMap[recruiterUid]) {
+              const stats = performanceMap[recruiterUid];
+              stats.total++;
+
+              if (['Selected', 'Hired'].includes(candidate.status)) {
+                  stats.selected++;
+              } else if (['Rejected'].includes(candidate.status)) {
+                  stats.rejected++;
+              } else if (['Quit'].includes(candidate.status)) {
+                  stats.quit++;
+              } else {
+                  stats.pending++;
+              }
+          }
+      });
+
+      // 3. Final mapping to TeamMemberPerformance structure
+      return Object.values(performanceMap).map(stats => {
+          const name = stats.userProfile.name || 'Unknown';
+          // Prioritize the specific role from TeamMember record, otherwise use UserType
+          const role = stats.teamMember?.role || stats.userProfile.userType || 'N/A'; 
+
+          const totalHandled = stats.total;
+          const successRate = totalHandled > 0 ? (stats.selected / totalHandled) * 100 : 0;
+
+          return {
+              name,
+              role: typeof role === 'string' ? role : 'N/A',
+              total: stats.total,
+              selected: stats.selected,
+              pending: stats.pending,
+              rejected: stats.rejected,
+              quit: stats.quit,
+              successRate: parseFloat(successRate.toFixed(2)),
+              reportingManagerName: stats.reportingManagerName,
+              reportingManagerUserType: stats.reportingManagerUserType,
+          };
+      }).sort((a, b) => {
+          // Primary sort: by reporting manager name, with 'N/A' last
+          const managerNameA = a.reportingManagerName === 'N/A' ? 'ZZZ' : a.reportingManagerName || '';
+          const managerNameB = b.reportingManagerName === 'N/A' ? 'ZZZ' : b.reportingManagerName || '';
+          const managerComparison = managerNameA.localeCompare(managerNameB);
+          if (managerComparison !== 0) return managerComparison;
+
+          // Secondary sort: TeamLead before Team, then by name
+          const typeOrderA = a.reportingManagerUserType === UserType.TEAMLEAD ? 0 : (a.reportingManagerUserType === UserType.TEAM ? 1 : 2);
+          const typeOrderB = b.reportingManagerUserType === UserType.TEAMLEAD ? 0 : (b.reportingManagerUserType === UserType.TEAM ? 1 : 2);
+          if (typeOrderA !== typeOrderB) return typeOrderA - typeOrderB;
+
+          return (a.name || '').localeCompare(b.name || '');
+      });
+  }, [candidates, allUsers, teamMembers]);
+
 
   // Combined stats object
   const dashboardStats: DashboardStats = useMemo(() => {
@@ -127,46 +388,78 @@ const App: React.FC = () => {
 
     const pendingReqs = partnerReqs.filter(r => r.submissionStatus === 'Pending Review').reduce((acc, r) => acc + (r.openings || 0), 0);
     const approvedReqs = partnerReqs.filter(r => r.submissionStatus === 'Approved').reduce((acc, r) => acc + (r.openings || 0), 0);
+    
+    // HR Updates Stats
+    const totalSelected = candidates.filter(c => c.status === 'Selected' || c.status === 'Hired').length;
+    const totalOfferReleased = candidates.filter(c => c.status === 'Offer Sent').length;
+    const onboardingPending = candidates.filter(c => c.status === 'Hired').length; // Assuming Hired means onboarding starts
+    
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).getTime();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+    const newJoiningToday = candidates.filter(c => c.status === 'Hired' && new Date(c.date).getTime() >= startOfDay).length;
+    const newJoiningWeek = candidates.filter(c => c.status === 'Hired' && new Date(c.date).getTime() >= startOfWeek).length;
+    const newJoiningMonth = candidates.filter(c => c.status === 'Hired' && new Date(c.date).getTime() >= startOfMonth).length;
+
 
     return {
         pipeline: { active: activeCount, interview: interviewCount, rejected: rejectedCount, quit: quitCount },
         vendor: { total: [...new Set(lineups.map(l => l.vendor).filter(v => v !== 'Direct'))].length },
         complaint: { active: activeComplaints, closed: closedComplaints },
         partnerRequirement: { total: pendingReqs + approvedReqs, pending: pendingReqs, approved: approvedReqs },
+        hrUpdates: {
+            totalSelected,
+            totalOfferReleased,
+            onboardingPending,
+            newJoiningToday,
+            newJoiningWeek,
+            newJoiningMonth
+        },
         process: [
-            { name: 'Sourced', count: candidates.filter(c => c.status === 'Sourced').length, color: 'bg-blue-400' },
             { name: 'Screening', count: candidates.filter(c => c.status === 'Screening').length, color: 'bg-blue-500' },
             { name: 'Interview', count: interviewCount, color: 'bg-indigo-500' },
-            { name: 'Offer Sent', count: candidates.filter(c => c.status === 'Offer Sent').length, color: 'bg-indigo-600' },
             { name: 'Selected', count: candidates.filter(c => c.status === 'Selected').length, color: 'bg-purple-500' },
-            { name: 'Hired', count: candidates.filter(c => c.status === 'Hired').length, color: 'bg-green-500' },
+            { name: 'Joined', count: candidates.filter(c => c.status === 'Hired').length, color: 'bg-green-500' },
         ],
         role: [
             { name: 'Picker', count: candidates.filter(c => c.role?.toLowerCase().includes('picker')).length, color: 'bg-cyan-500' },
-            { name: 'Packer', count: candidates.filter(c => c.role?.toLowerCase().includes('packer')).length, color: 'bg-teal-500' },
-            { name: 'Rider', count: candidates.filter(c => c.role?.toLowerCase().includes('rider')).length, color: 'bg-emerald-500' },
+            { name: 'Sales Executive', count: candidates.filter(c => c.role?.toLowerCase().includes('sales executive')).length, color: 'bg-teal-500' },
+            { name: 'Team Leader', count: candidates.filter(c => c.role?.toLowerCase().includes('team leader')).length, color: 'bg-emerald-500' },
+            { name: 'Packer', count: candidates.filter(c => c.role?.toLowerCase().includes('packer')).length, color: 'bg-blue-500' },
+            { name: 'Driver', count: candidates.filter(c => c.role?.toLowerCase().includes('driver')).length, color: 'bg-purple-500' },
         ],
-        team: teamPerformance
+        // NEW: Pass aggregated job data
+        roleWiseJobData,
+        storeWiseJobData,
+        partnerWiseJobData,
+        teamWiseJobData,
+        teamPerformance, // NEW
     };
-  }, [lineups, candidates, complaints, partnerReqs, teamPerformance]);
+  }, [lineups, candidates, complaints, partnerReqs, roleWiseJobData, storeWiseJobData, partnerWiseJobData, teamWiseJobData, teamPerformance]);
 
-  const handleUpdateBranding = (newBranding: BrandingConfig) => {
+  const handleUpdateBranding = useCallback(async (newBranding: BrandingConfig) => {
     try {
-        localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(newBranding));
+        await updateBrandingConfig(newBranding);
+        setBranding(newBranding);
+        // alert("Branding updated successfully!"); // Optional: show a toast/alert
     } catch (error) {
-        console.error("Could not save branding to localStorage", error);
+        console.error("Error updating branding in Firebase:", error);
+        alert("Failed to update branding.");
     }
-    setBranding(newBranding);
-  };
+  }, []);
 
-  const handleLogoUpload = (newLogo: string) => {
+  const handleLogoUpload = useCallback(async (newLogo: string) => {
       try {
-          localStorage.setItem(LOGO_STORAGE_KEY, newLogo);
+          await updateLogoSrc(newLogo);
+          setLogoSrc(newLogo);
+          // alert("Logo uploaded successfully!"); // Optional: show a toast/alert
       } catch (error) {
-          console.error("Could not save logo to localStorage", error);
+          console.error("Error uploading logo to Firebase:", error);
+          alert("Failed to upload logo.");
       }
-      setLogoSrc(newLogo);
-  };
+  }, []);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -177,16 +470,32 @@ const App: React.FC = () => {
     const unsubJobs = onJobsChange(setJobs);
     const unsubLineups = onDailyLineupsChange(setLineups);
     const unsubCandidates = onCandidatesChange(setCandidates);
+    const unsubUsers = onUsersChange(setAllUsers); // Listen to all user profile changes
+    const unsubTeamMembers = onTeamMembersChange(setTeamMembers); // New: Listen to team member changes
     const unsubComplaints = onComplaintsChange(setComplaints);
     const unsubReqs = onAllPartnerRequirementsChange(setPartnerReqs);
-    getUsers().then(setAllUsers);
+    
+    // Listen to branding config changes from Firebase
+    const unsubBranding = onBrandingConfigChange((config) => {
+        if (config) {
+            setBranding(config);
+            setLogoSrc(config.logoSrc || defaultLogo); // Assuming logoSrc might be part of BrandingConfig or a separate node
+        } else {
+            // If no branding config in Firebase, set to defaults
+            setBranding(defaultBranding);
+            setLogoSrc(defaultLogo);
+        }
+    });
 
     return () => {
       unsubJobs();
       unsubLineups();
       unsubCandidates();
+      unsubUsers(); // Unsubscribe user listener
+      unsubTeamMembers(); // Unsubscribe team member listener
       unsubComplaints();
       unsubReqs();
+      unsubBranding(); // Unsubscribe branding listener
     };
   }, []);
 
@@ -422,9 +731,16 @@ const App: React.FC = () => {
             vendorStats={dashboardStats.vendor}
             complaintStats={dashboardStats.complaint}
             partnerRequirementStats={dashboardStats.partnerRequirement}
+            hrUpdatesStats={dashboardStats.hrUpdates} // Pass new HR updates stats
             candidatesByProcess={dashboardStats.process}
             candidatesByRole={dashboardStats.role}
-            teamPerformance={dashboardStats.team}
+            // NEW: Pass aggregated job data
+            roleWiseJobData={dashboardStats.roleWiseJobData}
+            storeWiseJobData={dashboardStats.storeWiseJobData}
+            partnerWiseJobData={dashboardStats.partnerWiseJobData}
+            teamWiseJobData={dashboardStats.teamWiseJobData}
+            teamPerformance={dashboardStats.teamPerformance} // NEW
+            teamMembers={teamMembers}
             activeAdminMenuItem={activeAdminMenuItem}
             onAdminMenuItemClick={setActiveAdminMenuItem}
             activeCandidateMenuItem={activeCandidateMenuItem}
@@ -434,6 +750,8 @@ const App: React.FC = () => {
             onUpdateBranding={handleUpdateBranding}
             currentUser={currentAppUser}
             currentUserProfile={currentUserProfile}
+            allUsers={allUsers} // NEW: Pass allUsers
+            candidates={candidates}
             onApplyNow={handleApplyNow}
             onCvCompletion={handleCvCompletion}
             onProfileUpdate={handleProfileUpdate}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Button from './Button';
 import { UserType, HeaderProps } from '../types';
@@ -19,19 +20,29 @@ const Header: React.FC<HeaderProps> = ({
     { label: 'Partner Login', type: UserType.PARTNER },
     { label: 'Team Login', type: UserType.TEAM },
   ];
+  
+  const dashboardTitle = isShowingDashboard && userType === UserType.TEAMLEAD ? 'Team Lead Dashboard' : null;
 
   return (
     <header className="bg-[#191e44] shadow-md py-4 px-6 md:px-8 sticky top-0 z-50">
       <div className="container mx-auto flex flex-wrap items-center justify-between">
-        <button 
-            onClick={onHomeClick}
-            className="flex items-center mb-4 md:mb-0 hover:opacity-80 transition-opacity focus:outline-none"
-        >
-          {logoSrc && (
-            <img src={logoSrc} alt="Company Logo" className="h-12 w-auto mr-4" />
+        <div className="flex items-center mb-4 md:mb-0">
+          <button 
+              onClick={onHomeClick}
+              className="flex items-center hover:opacity-80 transition-opacity focus:outline-none"
+          >
+            {logoSrc && (
+              <img src={logoSrc} alt="Company Logo" className="h-12 w-auto mr-4" />
+            )}
+            <h1 className="text-2xl font-bold text-white">R K M Career</h1>
+          </button>
+          {dashboardTitle && (
+            <div className="flex items-center">
+                <span className="text-2xl font-light text-gray-400 mx-3 hidden sm:block">/</span>
+                <h2 className="text-xl font-semibold text-white hidden sm:block">{dashboardTitle}</h2>
+            </div>
           )}
-          <h1 className="text-2xl font-bold text-white">R K M Career</h1>
-        </button>
+        </div>
 
         <nav className="flex flex-wrap gap-2 md:gap-4 justify-center md:justify-end text-sm md:text-base items-center">
           {!isLoggedIn ? (
@@ -57,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({
             </>
           ) : (
             <>
-              {!isShowingDashboard ? (
+              {!isShowingDashboard && (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -65,15 +76,6 @@ const Header: React.FC<HeaderProps> = ({
                     className="bg-indigo-500 hover:bg-indigo-600"
                   >
                     Go to Dashboard
-                  </Button>
-              ) : (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={onHomeClick}
-                    className="border border-white text-white hover:bg-white/10"
-                  >
-                    View Job Site
                   </Button>
               )}
               
