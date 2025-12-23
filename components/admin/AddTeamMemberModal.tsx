@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import Input from '../Input';
 import Button from '../Button';
-import { UserProfile, Role } from '../../types';
+import { UserProfile, Role, TeamMember } from '../../types';
 
 interface AddTeamMemberModalProps {
     isOpen: boolean;
@@ -12,7 +12,8 @@ interface AddTeamMemberModalProps {
     availableLocations: string[];
     availableVendors: string[];
     potentialManagers: UserProfile[];
-    customRoles: Role[]; // Added prop for dynamic roles
+    customRoles: Role[];
+    memberToEdit: TeamMember | null; // New prop for editing
 }
 
 const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({ 
@@ -22,7 +23,8 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
     availableLocations, 
     availableVendors,
     potentialManagers,
-    customRoles
+    customRoles,
+    memberToEdit
 }) => {
     const initialFormData = {
         name: '',
@@ -34,7 +36,25 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
         workingLocations: [],
         vendors: [],
     };
-    const [formData, setFormData] = useState(initialFormData);
+    const [formData, setFormData] = useState<any>(initialFormData);
+    const isEditing = !!memberToEdit;
+
+    useEffect(() => {
+        if (isEditing) {
+            setFormData({
+                name: memberToEdit.name || '',
+                email: memberToEdit.email || '',
+                mobile: memberToEdit.mobile || '',
+                salary: memberToEdit.salary || '0',
+                role: memberToEdit.role || '',
+                reportingManager: memberToEdit.reportingManager || '',
+                workingLocations: memberToEdit.workingLocations || [],
+                vendors: memberToEdit.vendors || [],
+            });
+        } else {
+            setFormData(initialFormData);
+        }
+    }, [memberToEdit, isOpen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -58,17 +78,16 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
             return;
         }
         await onSave(formData);
-        setFormData(initialFormData); // Reset form fields after successful save
     };
     
     const selectStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white";
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Add Team Member" maxWidth="max-w-3xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Edit Team Member' : 'Add Team Member'} maxWidth="max-w-3xl">
             <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                     <Input id="name" name="name" label="Name *" value={formData.name} onChange={handleChange} wrapperClassName="mb-0" required />
-                    <Input id="email" name="email" label="Email *" type="email" value={formData.email} onChange={handleChange} wrapperClassName="mb-0" required />
+                    <Input id="email" name="email" label="Email *" type="email" value={formData.email} onChange={handleChange} wrapperClassName="mb-0" required disabled={isEditing} />
                     <Input id="mobile" name="mobile" label="Mobile Number" type="tel" value={formData.mobile} onChange={handleChange} wrapperClassName="mb-0" />
                     <Input id="salary" name="salary" label="Salary" type="number" value={formData.salary} onChange={handleChange} wrapperClassName="mb-0" />
                     <div>
@@ -111,7 +130,7 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
 
                 <div className="flex justify-end gap-3 pt-6 border-t mt-6">
                     <Button type="button" variant="secondary" onClick={onClose} className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700">Cancel</Button>
-                    <Button type="button" variant="primary" onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700">Save Member</Button>
+                    <Button type="button" variant="primary" onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700">{isEditing ? 'Save Changes' : 'Save Member'}</Button>
                 </div>
             </div>
         </Modal>
