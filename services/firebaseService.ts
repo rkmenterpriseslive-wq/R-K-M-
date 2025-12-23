@@ -935,29 +935,6 @@ export const createTeamMember = async (data: Omit<TeamMember, 'id'>): Promise<vo
     // --- END NEW LOGIC ---
 };
 
-export const updateTeamMember = async (id: string, data: Partial<TeamMember>): Promise<void> => {
-    const teamMemberRef = ref(database, `team_members/${id}`);
-    await update(teamMemberRef, data);
-
-    // Also update the corresponding UserProfile to keep data in sync
-    // Fix: Use 'mobile' from TeamMember type instead of 'phone'.
-    if (data.email && (data.name || data.mobile || data.role)) {
-        const userProfile = await findUserProfileByEmail(data.email);
-        if (userProfile) {
-            const profileUpdates: Partial<UserProfile> = {};
-            if (data.name) profileUpdates.name = data.name;
-            // Fix: Use 'mobile' from TeamMember and assign it to 'phone' in UserProfile.
-            if (data.mobile) profileUpdates.phone = data.mobile;
-            if (data.role) {
-                profileUpdates.role = data.role;
-                profileUpdates.userType = await inferUserTypeFromRole(data.role);
-            }
-            await updateUserProfile(userProfile.uid, profileUpdates);
-        }
-    }
-};
-
-
 export const deleteTeamMember = async (id: string): Promise<void> => {
     // Optionally delete associated UserProfile if it's a pseudo one
     const teamMemberRef = ref(database, `team_members/${id}`);

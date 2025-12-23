@@ -45,7 +45,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   // Hardcoded experience levels, as they are not in panelConfig currently
-  const experienceLevels = ['Fresher', 'Experience', 'Any'];
+  const experienceLevels = ['Fresher', '1-3 Years', '3-5 Years', '5+ Years'];
 
   useEffect(() => {
     if (vendor) {

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { getVendors, createVendor, updateVendor, getPanelConfig } from '../../services/firebaseService';
 import { PanelConfig, Vendor as VendorType } from '../../types'; // Renamed Vendor import to VendorType
@@ -69,19 +70,6 @@ const VendorDirectoryView: React.FC = () => {
 
     const selectStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white";
 
-    const getContactString = (email?: string, phone?: string): string => {
-        const e = email || '';
-        const p = phone || '';
-    
-        if (e && p && e.includes(p)) {
-            return e;
-        }
-        if (e && p && p.includes(e)) {
-            return p;
-        }
-        return [e, p].filter(Boolean).join(' | ');
-    };
-
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -137,7 +125,7 @@ const VendorDirectoryView: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-gray-900">{vendor.contactPerson}</div>
-                                        <div className="text-xs text-gray-500">{getContactString(vendor.email, vendor.phone)}</div>
+                                        <div className="text-xs text-gray-500">{vendor.email} | {vendor.phone}</div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-wrap gap-1">

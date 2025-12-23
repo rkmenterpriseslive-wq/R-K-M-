@@ -5,7 +5,7 @@ import Input from '../Input';
 import Button from '../Button';
 import AddTeamMemberModal from './AddTeamMemberModal';
 import Modal from '../Modal';
-import { onRolesChange, addRole, deleteRole, onTeamMembersChange, createTeamMember, deleteTeamMember, updateTeamMember } from '../../services/firebaseService';
+import { onRolesChange, addRole, deleteRole, onTeamMembersChange, createTeamMember, deleteTeamMember } from '../../services/firebaseService';
 import BrandingView from './BrandingView'; // Import the new BrandingView
 import MyAccountView from './MyAccountView'; // Import MyAccountView
 import PermissionsView from './PermissionsView'; // Import PermissionsView
@@ -267,7 +267,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('Team & Roles');
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
-    const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [customRoles, setCustomRoles] = useState<Role[]>([]);
     const [newRoleName, setNewRoleName] = useState('');
@@ -282,52 +281,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         };
     }, []);
 
-    const uniqueTeamMembers = useMemo(() => {
-        const seenEmails = new Set<string>();
-        return teamMembers.filter(member => {
-            if (!member.email) {
-                return true; // Keep members without email (though unlikely)
-            }
-            const lowerCaseEmail = member.email.toLowerCase();
-            if (seenEmails.has(lowerCaseEmail)) {
-                return false; // This is a duplicate email, so filter it out
-            } else {
-                seenEmails.add(lowerCaseEmail);
-                return true; // This is the first time we've seen this email, so keep it
-            }
-        });
-    }, [teamMembers]);
-
-
-    const handleOpenAddModal = () => {
-        setEditingMember(null);
-        setIsTeamModalOpen(true);
-    };
-    
-    const handleOpenEditModal = (member: TeamMember) => {
-        setEditingMember(member);
-        setIsTeamModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsTeamModalOpen(false);
-        setEditingMember(null);
-    };
-
-    const handleSaveTeamMember = async (memberData: TeamMember) => {
+    const handleAddTeamMember = async (memberData: Omit<TeamMember, 'id'>) => {
         try {
-            if (editingMember) {
-                if (!editingMember.id) throw new Error("Member ID is missing for update.");
-                await updateTeamMember(editingMember.id, memberData);
-                alert('Team member updated successfully!');
-            } else {
-                await createTeamMember(memberData);
-                alert('Team member added! Their temporary password is "password".');
-            }
-            handleCloseModal();
+            await createTeamMember(memberData);
+            alert('Team member added! Their temporary password is "password".');
+            setIsTeamModalOpen(false);
         } catch (error) {
             console.error(error);
-            alert(`Failed to save team member.`);
+            alert('Failed to add team member.');
         }
     };
 
@@ -377,7 +338,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="space-y-6">
                         <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl">
                             <h3 className="text-xl font-bold text-gray-800">Manage Team & Roles</h3>
-                            <Button onClick={handleOpenAddModal} className="bg-indigo-600 hover:bg-indigo-700">
+                            <Button onClick={() => setIsTeamModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                                 Add Team Member
                             </Button>
@@ -395,7 +356,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {uniqueTeamMembers.map(member => (
+                                    {teamMembers.map(member => (
                                         <tr key={member.id}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-gray-900">{member.name}</div>
@@ -407,7 +368,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{member.salary && member.salary !== '0' ? member.salary : '-'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex items-center space-x-4">
-                                                    <button onClick={() => handleOpenEditModal(member)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                                    <button className="text-indigo-600 hover:text-indigo-900">Edit</button>
                                                     <Button variant="danger" size="sm" onClick={() => handleDeleteTeamMember(member)}>Delete</Button>
                                                 </div>
                                             </td>
@@ -418,13 +379,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <AddTeamMemberModal 
                             isOpen={isTeamModalOpen}
-                            onClose={handleCloseModal}
-                            onSave={handleSaveTeamMember}
+                            onClose={() => setIsTeamModalOpen(false)}
+                            onSave={handleAddTeamMember}
                             availableLocations={panelConfig?.locations || []}
                             availableVendors={availableVendorNames}
                             potentialManagers={potentialManagers}
                             customRoles={customRoles}
-                            memberToEdit={editingMember}
                         />
                     </div>
                 );
